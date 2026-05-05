@@ -99,9 +99,9 @@ class MenuSystem:
         self.screen.blit(sub_surf, (WIDTH//2 - sub_surf.get_width()//2, 230))
 
         # Botones
-        self.btn_start = self._draw_button("▶ INICIAR SIMULACIÓN", WIDTH//2, 350, mx, my, is_primary=True)
-        self.btn_config = self._draw_button("⚙ CONFIGURACIÓN", WIDTH//2, 420, mx, my)
-        self.btn_credits = self._draw_button("◈ CRÉDITOS", WIDTH//2, 490, mx, my)
+        self.btn_start = self._draw_button(" INICIAR SIMULACIÓN", WIDTH//2, 350, mx, my, is_primary=True)
+        self.btn_config = self._draw_button(" CONFIGURACIÓN", WIDTH//2, 420, mx, my)
+        self.btn_credits = self._draw_button(" CRÉDITOS", WIDTH//2, 490, mx, my)
 
     def _draw_char_select(self, mx, my):
         title = self.font_title.render("SELECCIÓN DE AGENTE", True, COLORS["cyan_light"])
