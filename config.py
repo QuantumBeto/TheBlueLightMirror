@@ -1,4 +1,3 @@
-# config.py
 WIDTH, HEIGHT = 1280, 720
 FPS = 60
 
@@ -21,11 +20,11 @@ CHARACTERS = [
         "desc": "Equilibrado, pero vulnerable a ráfagas de notificaciones."
     },
     {
-        "id": "dharma",
-        "name": "Dharma",
-        "role": "La Estratega",
-        "stats": {"enfoque": 90, "resistencia": 70, "velocidad": 50},
-        "desc": "Gran capacidad de filtrado. Ideal para niveles de alta saturación."
+        "id": "among_us",
+        "name": "Among Us",
+        "role": "El Impostor",
+        "stats": {"enfoque": 70, "resistencia": 60, "velocidad": 75},
+        "desc": "Nadie sabe de dónde viene. Maestro del engaño cognitivo."
     },
     {
         "id": "pato",
@@ -40,6 +39,13 @@ CHARACTERS = [
         "role": "Speedrunner",
         "stats": {"enfoque": 40, "resistencia": 40, "velocidad": 100},
         "desc": "Extrema velocidad, pero cualquier distracción es fatal."
+    },
+    {
+        "id": "baymax",
+        "name": "Baymax",
+        "role": "Soporte Emocional",
+        "stats": {"enfoque": 80, "resistencia": 90, "velocidad": 40},
+        "desc": "Lento pero irrompible. Absorbe el ruido digital sin colapsar."
     },
     {
         "id": "nexo",
