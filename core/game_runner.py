@@ -8,133 +8,47 @@ from core.camera import CinematicCamera
 import math
 import sys
 
-# =============================================================================
-# MUNDO Y COLISIONES MEJORADAS
-# =============================================================================
-class World:
-    def __init__(self):
-        self.limit_x = 8.0
-        self.limit_z = 8.0
-        self.floor_y = 0.0
-        self.obstacles = [
-            (3.0,  2.0, 1.0),
-            (-3.0, 3.0, 1.0),
-            (0.0, -4.0, 1.2),
-            (5.0, -2.0, 0.8),
-            (-5.0,-3.0, 1.0),
-        ]
-
-    def check_collision(self, player):
-        collided = False
-        p_radio = 0.5
-
-        if player.x >  self.limit_x - p_radio: player.x =  self.limit_x - p_radio; collided = True
-        if player.x < -self.limit_x + p_radio: player.x = -self.limit_x + p_radio; collided = True
-        if player.z >  self.limit_z - p_radio: player.z =  self.limit_z - p_radio; collided = True
-        if player.z < -self.limit_z + p_radio: player.z = -self.limit_z + p_radio; collided = True
-
-        for (cx, cz, r) in self.obstacles:
-            dx = player.x - cx
-            dz = player.z - cz
-            dist = math.sqrt(dx*dx + dz*dz)
-            min_dist = r + p_radio
-            
-            if dist < min_dist:
-                if dist == 0: dist = 0.001
-                overlap = min_dist - dist
-                player.x += (dx / dist) * overlap
-                player.z += (dz / dist) * overlap
-                collided = True
-
-        return collided
-
-    def draw(self):
-        self._draw_floor()
-        self._draw_walls()
-        self._draw_obstacles()
-        self._draw_grid()
-
-    def _draw_floor(self):
-        glDisable(GL_LIGHTING)
-        glColor3f(0.08, 0.08, 0.15)
-        glBegin(GL_QUADS)
-        glVertex3f(-self.limit_x, 0, -self.limit_z)
-        glVertex3f( self.limit_x, 0, -self.limit_z)
-        glVertex3f( self.limit_x, 0,  self.limit_z)
-        glVertex3f(-self.limit_x, 0,  self.limit_z)
-        glEnd()
-        glEnable(GL_LIGHTING)
-
-    def _draw_grid(self):
-        glDisable(GL_LIGHTING)
-        glColor3f(0.0, 0.3, 0.5)
-        glLineWidth(1)
-        glBegin(GL_LINES)
-        for i in range(-8, 9):
-            glVertex3f(i, 0.01, -self.limit_z)
-            glVertex3f(i, 0.01,  self.limit_z)
-            glVertex3f(-self.limit_x, 0.01, i)
-            glVertex3f( self.limit_x, 0.01, i)
-        glEnd()
-        glEnable(GL_LIGHTING)
-
-    def _draw_walls(self):
-        glDisable(GL_LIGHTING)
-        glColor3f(0.0, 0.5, 0.8)
-        glLineWidth(3)
-        h = 0.3
-        lx, lz = self.limit_x, self.limit_z
-        glBegin(GL_LINE_LOOP)
-        glVertex3f(-lx, h, -lz)
-        glVertex3f( lx, h, -lz)
-        glVertex3f( lx, h,  lz)
-        glVertex3f(-lx, h,  lz)
-        glEnd()
-        glEnable(GL_LIGHTING)
-
-    def _draw_obstacles(self):
-        q = gluNewQuadric()
-        for (cx, cz, r) in self.obstacles:
-            glPushMatrix()
-            glTranslatef(cx, 0, cz)
-            glDisable(GL_LIGHTING)
-            glColor3f(0.0, 0.6, 0.9)
-            glBegin(GL_LINE_LOOP)
-            for i in range(32):
-                angle = 2 * math.pi * i / 32
-                glVertex3f(math.cos(angle) * (r + 0.5), 0.02, math.sin(angle) * (r + 0.5))
-            glEnd()
-            glEnable(GL_LIGHTING)
-
-            glColor3f(0.1, 0.4, 0.6)
-            glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, [0.1, 0.4, 0.6, 1.0])
-            gluCylinder(q, r, r * 0.8, 2.5, 16, 1)
-            glTranslatef(0, 2.5, 0)
-            glColor3f(0.0, 0.8, 1.0)
-            glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, [0.0, 0.8, 1.0, 1.0])
-            gluSphere(q, r * 0.9, 16, 16)
-            glPopMatrix()
+# Importamos nuestro primer nivel diseñado con POO
+from stages.escuela import NivelEscuela 
 
 # =============================================================================
-# UI 2D Y MENÚ DE PAUSA (SIN HUD)
+# UI 2D, HUD DE CONCENTRACIÓN Y MENÚ DE PAUSA
 # =============================================================================
-def draw_ui(screen, character_id, is_paused, mx, my):
+def draw_ui(screen, character_id, is_paused, mx, my, player):
     font = pygame.font.SysFont('monospace', 18, bold=True)
+    font_small = pygame.font.SysFont('monospace', 14)
     font_title = pygame.font.SysFont('monospace', 48, bold=True)
 
-    botones = {}
+    # 1. BARRA DE CONCENTRACIÓN (Fricción cognitiva)
+    c_val = getattr(player, "concentracion", 100.0)
+    
+    # Fondo de la barra
+    pygame.draw.rect(screen, (50, 50, 50), (18, 18, 200, 15)) 
+    # Color de la barra (cambia a rojo si baja del 50%)
+    c_color = (int(255 * (1 - c_val/100)), int(255 * (c_val/100)), 200 if c_val > 50 else 50)
+    pygame.draw.rect(screen, c_color, (18, 18, int(200 * (c_val/100)), 15))
+    
+    c_text = font_small.render(f"CONCENTRACIÓN: {int(c_val)}%", True, (255, 255, 255))
+    screen.blit(c_text, (18, 38))
 
+    # 2. DEGRADACIÓN VISUAL DE LA PANTALLA
+    if c_val < 100.0:
+        # Entre más distraído, más oscura/ruidosa se vuelve la pantalla
+        intensidad = int(200 * (1.0 - (c_val / 100.0)))
+        overlay_ruido = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay_ruido.fill((20, 0, 30, intensidad)) # Tono pesado morado/rojizo
+        screen.blit(overlay_ruido, (0, 0))
+
+    # 3. MENÚ DE PAUSA
+    botones = {}
     if is_paused:
-        # Fondo oscuro
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 10, 20, 220))
         screen.blit(overlay, (0, 0))
         
-        # Título
         t = font_title.render("JUEGO EN PAUSA", True, (128, 196, 255))
         screen.blit(t, (WIDTH//2 - t.get_width()//2, HEIGHT//2 - 180))
 
-        # Lista de botones: (ID, Texto, Color Hover, Color Base, Color Borde)
         config_botones = [
             ("resume", "CONTINUAR", (0, 60, 120), (0, 30, 60), (128, 196, 255)),
             ("change_char", "CAMBIAR DE PERSONAJE", (0, 80, 80), (0, 40, 40), (100, 255, 200)),
@@ -186,9 +100,13 @@ def run(character_id):
 
     init_opengl()
 
+    # Inicializamos al personaje y le damos su salud mental máxima
     player = get_character(character_id)
-    world  = World()
+    player.concentracion = 100.0 
+
+    # CARGAMOS EL NIVEL MODULAR
     camera = CinematicCamera()
+    world  = NivelEscuela() 
 
     is_paused = False
     clock = pygame.time.Clock()
@@ -223,20 +141,20 @@ def run(character_id):
                         if event.key == k: _set_expresion(player, v)
 
             if event.type == MOUSEBUTTONDOWN and event.button == 1 and is_paused:
-                botones = draw_ui(pygame.Surface((1,1)), character_id, True, mx, my)
+                botones = draw_ui(pygame.Surface((1,1)), character_id, True, mx, my, player)
                 
                 if "resume" in botones and botones["resume"].collidepoint(mx, my):
                     is_paused = False
                     pygame.mouse.set_visible(False)
                     pygame.event.set_grab(True)
                 elif "change_char" in botones and botones["change_char"].collidepoint(mx, my):
-                    return "CHAR_SELECT" # Devuelve la orden de cambiar personaje
+                    return "CHAR_SELECT" 
                 elif "controls" in botones and botones["controls"].collidepoint(mx, my):
-                    print("Abre controles") # TODO: Implementar ventana de controles
+                    print("Abre controles") 
                 elif "config" in botones and botones["config"].collidepoint(mx, my):
-                    print("Abre configuración") # TODO: Implementar ventana de config
+                    print("Abre configuración") 
                 elif "exit" in botones and botones["exit"].collidepoint(mx, my):
-                    return "MAIN_MENU" # Devuelve la orden de ir al menú principal
+                    return "MAIN_MENU" 
 
             if event.type == MOUSEMOTION and not is_paused:
                 dx, dy = event.rel
@@ -268,7 +186,10 @@ def run(character_id):
 
             _set_movimiento(player, 2 if moving else 1)
             player.update(dt)
-            world.check_collision(player) # Llamamos la colisión sin usar el valor de retorno
+            
+            # Actualizamos y verificamos colisiones del nivel
+            world.update(dt)
+            world.check_collision(player) 
 
         # ── RENDER 3D ────────────────────────────────────────────
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -278,6 +199,11 @@ def run(character_id):
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
         
+        # ILUMINACIÓN DINÁMICA (Efecto de pérdida de concentración)
+        luz_int = max(0.1, player.concentracion / 100.0)
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, [luz_int, luz_int, luz_int, 1.0])
+        glLightfv(GL_LIGHT0, GL_AMBIENT, [luz_int * 0.3, luz_int * 0.3, luz_int * 0.3, 1.0])
+
         camera.apply(player.x, getattr(player, 'y', 0), player.z)
 
         world.draw()
@@ -300,7 +226,8 @@ def run(character_id):
 
         hud = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         hud.fill((0, 0, 0, 0))
-        draw_ui(hud, character_id, is_paused, mx, my)
+        # Le pasamos el 'player' para que lea la concentración
+        draw_ui(hud, character_id, is_paused, mx, my, player) 
         
         hud_data = pygame.image.tobytes(hud, "RGBA", True)
         glRasterPos2i(0, 0)
