@@ -155,8 +155,9 @@ def run(character_id):
 
     player = get_character(character_id)
     player.concentracion = 100.0
-    player.x  = 0.0
-    player.z  = -26.0
+    spawn_x, spawn_z = School.get_spawn()
+    player.x = spawn_x
+    player.z = spawn_z
     if hasattr(player, "y"):
         player.y = 1.5
 
@@ -259,16 +260,18 @@ def run(character_id):
                     camera.process_mouse(dx, dy)
 
         # ── LOGICA ─────────────────────────────────────────────────────────
-        if not is_paused and not show_controls:
-            keys   = pygame.key.get_pressed()
+        derrota      = player.concentracion <= 0
+        juego_activo = not is_paused and not show_controls                        and not world.meta_alcanzada and not derrota
 
-            # Velocidad base segun SHIFT (correr) y CTRL_R (agacharse)
+        if juego_activo:
+            keys = pygame.key.get_pressed()
+
             if keys[K_LSHIFT] or keys[K_RSHIFT]:
                 speed_mult = 1.8
                 _set_movimiento(player, 2)
             elif keys[K_RCTRL]:
                 speed_mult = 0.5
-                _set_movimiento(player, 6)  # Estado agachado si lo tiene
+                _set_movimiento(player, 6)
             else:
                 speed_mult = 1.0
 
@@ -294,11 +297,16 @@ def run(character_id):
                 player.rotacion_cuerpo = math.degrees(math.atan2(-move_x, -move_z)) + 180
                 if not (keys[K_LSHIFT] or keys[K_RSHIFT] or keys[K_RCTRL]):
                     _set_movimiento(player, 2)
+                # Recuperacion: caminar sin distracciones cerca restaura concentracion
+                alguna_persigue = any(getattr(d, "persiguiendo", False) for d in world.distracciones)
+                if not alguna_persigue:
+                    player.concentracion = min(100.0, player.concentracion + 3.0 * dt)
             else:
                 if not keys[K_RCTRL]:
                     _set_movimiento(player, 1)
 
             player.update(dt)
+            player.concentracion = max(0.0, player.concentracion)
 
             if hasattr(player, "y"):
                 if player.y < 1.5:
@@ -307,10 +315,13 @@ def run(character_id):
                     if hasattr(player, "vel_y"):
                         player.vel_y = 0
 
-            # Pasar el jugador al world.update para la IA de persecucion
             world.update(dt, player=player)
             world.check_collision(player)
+            hud.update(dt, player.concentracion)
 
+        elif not is_paused and not show_controls:
+            # Victoria o derrota: mundo sigue animandose, jugador congelado
+            world.update(dt)
             hud.update(dt, player.concentracion)
 
         # ── RENDER 3D ───────────────────────────────────────────────────────
@@ -341,7 +352,6 @@ def run(character_id):
         hud_surf = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         hud_surf.fill((0, 0, 0, 0))
 
-        derrota = (player.concentracion <= 0)
         hud.draw(hud_surf, player.concentracion,
                  meta_alcanzada=world.meta_alcanzada,
                  derrota=derrota)

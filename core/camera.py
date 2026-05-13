@@ -1,26 +1,26 @@
 import math
 from OpenGL.GLU import gluLookAt
-from OpenGL.GL import *
 
 class CinematicCamera:
-    DIST_MIN = 3.0
-    DIST_MAX = 18.0
+    DIST_MIN  = 3.0
+    DIST_MAX  = 12.0   # Reducido: evita salir del mapa con zoom maximo
+    CAM_Y_MAX = 14.0   # Techo absoluto de la camara (paredes miden 16 u)
+    CAM_Y_MIN = 1.0    # No bajar del suelo
 
     def __init__(self):
-        self.distance        = 8.0
-        self.y_offset        = 1.5
-        self.yaw             = 0.0
-        self.pitch           = 20.0
+        self.distance          = 8.0
+        self.y_offset          = 1.5
+        self.yaw               = 0.0
+        self.pitch             = 20.0
         self.mouse_sensitivity = 0.2
-        self.zoom_speed      = 1.2
+        self.zoom_speed        = 1.0
 
     def process_mouse(self, dx, dy):
         self.yaw   -= dx * self.mouse_sensitivity
         self.pitch += dy * self.mouse_sensitivity
-        self.pitch  = max(5.0, min(45.0, self.pitch))
+        self.pitch  = max(5.0, min(40.0, self.pitch))   # pitch max 40 en vez de 45
 
     def process_scroll(self, y):
-        """y > 0 acerca, y < 0 aleja (rueda del mouse)."""
         self.distance -= y * self.zoom_speed
         self.distance  = max(self.DIST_MIN, min(self.DIST_MAX, self.distance))
 
@@ -32,11 +32,15 @@ class CinematicCamera:
         cam_y = target_y + self.y_offset  + self.distance * math.sin(pitch_rad)
         cam_z = target_z + self.distance * math.cos(yaw_rad)   * math.cos(pitch_rad)
 
+        # Limites XZ: camara no sale del mapa (margen mayor que antes)
         if limits:
             lim_x, lim_z = limits
-            margin = 0.5
+            margin = 1.5
             cam_x = max(-lim_x + margin, min(lim_x - margin, cam_x))
             cam_z = max(-lim_z + margin, min(lim_z - margin, cam_z))
+
+        # Limite Y: camara entre suelo y techo
+        cam_y = max(self.CAM_Y_MIN, min(self.CAM_Y_MAX, cam_y))
 
         gluLookAt(
             cam_x, cam_y, cam_z,

@@ -1,17 +1,17 @@
 from OpenGL.GL import *
 
 class Furniture:
-    """Mobiliario — mesas, sillas, pizarrones."""
     def __init__(self):
+        # Mesas dentro del patio central (x: -12..12, z: -12..15)
         self.desks = [
-            (-16, -10, 0),   (-14, -10, 0),
-            (-16, -8,  0),   (-14, -8,  0),
-            (14, -10, 180),  (16, -10, 180),
-            (14, -8, 180),   (16, -8, 180),
+            (-8,  -8, 0), (-4,  -8, 0), (0,  -8, 0),
+            (-8,   2, 0), (-4,   2, 0), (0,   2, 0),
+            ( 4,   8, 0), ( 8,   8, 0),
         ]
         self.chairs = [
-            (-16.5, -10, 0), (-13.5, -10, 0),
-            (14.5, -10, 180), (16.5, -10, 180),
+            (-8, -10, 0), (-4, -10, 0), (0, -10, 0),
+            (-8,   0, 0), (-4,   0, 0), (0,   0, 0),
+            ( 4,   6, 0), ( 8,   6, 0),
         ]
 
     def update(self, dt):
@@ -28,12 +28,10 @@ class Furniture:
         glTranslatef(x, 0, z)
         glRotatef(rot, 0, 1, 0)
         glColor3f(0.6, 0.4, 0.2)
-        glPushMatrix(); glTranslatef(0, 0.7, 0); glScalef(1.2, 0.05, 0.6)
-        self._cube(); glPopMatrix()
+        glPushMatrix(); glTranslatef(0, 0.7, 0); glScalef(1.2, 0.05, 0.6); self._cube(); glPopMatrix()
         glColor3f(0.3, 0.2, 0.1)
-        for (ox, oz) in [(-0.5, -0.25), (0.5, -0.25), (-0.5, 0.25), (0.5, 0.25)]:
-            glPushMatrix(); glTranslatef(ox, 0.35, oz); glScalef(0.05, 0.7, 0.05)
-            self._cube(); glPopMatrix()
+        for (ox, oz) in [(-0.5,-0.25),(0.5,-0.25),(-0.5,0.25),(0.5,0.25)]:
+            glPushMatrix(); glTranslatef(ox, 0.35, oz); glScalef(0.05, 0.7, 0.05); self._cube(); glPopMatrix()
         glPopMatrix()
 
     def _draw_chair(self, x, z, rot):
@@ -41,18 +39,24 @@ class Furniture:
         glTranslatef(x, 0, z)
         glRotatef(rot, 0, 1, 0)
         glColor3f(0.7, 0.3, 0.2)
-        glPushMatrix(); glTranslatef(0, 0.5, 0); glScalef(0.4, 0.05, 0.4)
-        self._cube(); glPopMatrix()
-        glPushMatrix(); glTranslatef(0, 0.8, -0.18); glScalef(0.4, 0.5, 0.05)
-        self._cube(); glPopMatrix()
+        glPushMatrix(); glTranslatef(0, 0.5, 0); glScalef(0.4, 0.05, 0.4); self._cube(); glPopMatrix()
+        glPushMatrix(); glTranslatef(0, 0.8, -0.18); glScalef(0.4, 0.5, 0.05); self._cube(); glPopMatrix()
+        glColor3f(0.2, 0.1, 0.05)
+        for (ox, oz) in [(-0.15,-0.15),(0.15,-0.15),(-0.15,0.15),(0.15,0.15)]:
+            glPushMatrix(); glTranslatef(ox, 0.25, oz); glScalef(0.04, 0.5, 0.04); self._cube(); glPopMatrix()
         glPopMatrix()
 
     def _cube(self):
         glBegin(GL_QUADS)
-        for (a, b, c) in [(0,0,1),(0,0,-1),(0,1,0),(0,-1,0),(1,0,0),(-1,0,0)]:
-            glNormal3f(a, b, c)
-            for (x, y, z) in [(-0.5,-0.5,0.5*c),(0.5,-0.5,0.5*c),(0.5,0.5,0.5*c),(-0.5,0.5,0.5*c)] if c else \
-                             [(-0.5,0.5*b,-0.5),(0.5,0.5*b,-0.5),(0.5,0.5*b,0.5),(-0.5,0.5*b,0.5)] if b else \
-                             [(0.5*a,-0.5,-0.5),(0.5*a,0.5,-0.5),(0.5*a,0.5,0.5),(0.5*a,-0.5,0.5)]:
-                glVertex3f(x, y, z)
+        verts = [
+            ( 0, 0, 1,  (-0.5,-0.5, 0.5),( 0.5,-0.5, 0.5),( 0.5, 0.5, 0.5),(-0.5, 0.5, 0.5)),
+            ( 0, 0,-1,  (-0.5,-0.5,-0.5),(-0.5, 0.5,-0.5),( 0.5, 0.5,-0.5),( 0.5,-0.5,-0.5)),
+            ( 0, 1, 0,  (-0.5, 0.5,-0.5),( 0.5, 0.5,-0.5),( 0.5, 0.5, 0.5),(-0.5, 0.5, 0.5)),
+            ( 0,-1, 0,  (-0.5,-0.5,-0.5),( 0.5,-0.5,-0.5),( 0.5,-0.5, 0.5),(-0.5,-0.5, 0.5)),
+            ( 1, 0, 0,  ( 0.5,-0.5,-0.5),( 0.5, 0.5,-0.5),( 0.5, 0.5, 0.5),( 0.5,-0.5, 0.5)),
+            (-1, 0, 0,  (-0.5,-0.5,-0.5),(-0.5,-0.5, 0.5),(-0.5, 0.5, 0.5),(-0.5, 0.5,-0.5)),
+        ]
+        for nx,ny,nz, v0,v1,v2,v3 in verts:
+            glNormal3f(nx,ny,nz)
+            for v in (v0,v1,v2,v3): glVertex3f(*v)
         glEnd()
