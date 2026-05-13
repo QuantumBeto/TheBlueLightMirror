@@ -231,7 +231,7 @@ class MenuSystem:
             self.screen.blit(s, (WIDTH//2 - s.get_width()//2, 200 + i * 20))
         dev_title = self.font_btn.render("DESARROLLADO POR:", True, COLORS["cyan_light"])
         self.screen.blit(dev_title, (WIDTH//2 - dev_title.get_width()//2, 300))
-        nombres = ["1. Arturo Emiliano Meza Legorreta", "2. Alberto 'Beto' (Colaborador)", "3. Dharma (Colaboradora)"]
+        nombres = ["1. Arturo Emiliano Meza Legorreta", "2. Alan Roberto Aviles Sierra", "3. Dharma"]
         for i, nombre in enumerate(nombres):
             s = self.font_btn.render(nombre, True, (255, 255, 255))
             self.screen.blit(s, (WIDTH//2 - s.get_width()//2, 340 + i * 35))
