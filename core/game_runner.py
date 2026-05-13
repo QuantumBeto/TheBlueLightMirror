@@ -8,8 +8,8 @@ from core.camera import CinematicCamera
 import math
 import sys
 
-# Importamos nuestro primer nivel diseñado con POO
-from stages.escuela import NivelEscuela 
+# Importamos el nivel completo diseñado con POO
+from stages.school import School
 
 # =============================================================================
 # UI 2D, HUD DE CONCENTRACIÓN Y MENÚ DE PAUSA
@@ -19,12 +19,10 @@ def draw_ui(screen, character_id, is_paused, mx, my, player):
     font_small = pygame.font.SysFont('monospace', 14)
     font_title = pygame.font.SysFont('monospace', 48, bold=True)
 
-    # 1. BARRA DE CONCENTRACIÓN (Fricción cognitiva)
+    # 1. BARRA DE CONCENTRACIÓN
     c_val = getattr(player, "concentracion", 100.0)
     
-    # Fondo de la barra
     pygame.draw.rect(screen, (50, 50, 50), (18, 18, 200, 15)) 
-    # Color de la barra (cambia a rojo si baja del 50%)
     c_color = (int(255 * (1 - c_val/100)), int(255 * (c_val/100)), 200 if c_val > 50 else 50)
     pygame.draw.rect(screen, c_color, (18, 18, int(200 * (c_val/100)), 15))
     
@@ -33,10 +31,9 @@ def draw_ui(screen, character_id, is_paused, mx, my, player):
 
     # 2. DEGRADACIÓN VISUAL DE LA PANTALLA
     if c_val < 100.0:
-        # Entre más distraído, más oscura/ruidosa se vuelve la pantalla
         intensidad = int(200 * (1.0 - (c_val / 100.0)))
         overlay_ruido = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay_ruido.fill((20, 0, 30, intensidad)) # Tono pesado morado/rojizo
+        overlay_ruido.fill((20, 0, 30, intensidad)) 
         screen.blit(overlay_ruido, (0, 0))
 
     # 3. MENÚ DE PAUSA
@@ -100,15 +97,21 @@ def run(character_id):
 
     init_opengl()
 
-    # Inicializamos al personaje y le damos su salud mental máxima
+    # Configuración inicial del jugador
     player = get_character(character_id)
     player.concentracion = 100.0 
+    
+    # Spawn en la entrada de la escuela gigante
+    player.x = 0.0
+    player.z = -26.0
+    if hasattr(player, 'y'):
+        player.y = 1.5
 
-    # CARGAMOS EL NIVEL MODULAR
     camera = CinematicCamera()
-    world  = NivelEscuela() 
+    world  = School()
 
     is_paused = False
+    mouse_libre = False # MODO ROBLOX: Por defecto inicia bloqueado
     clock = pygame.time.Clock()
 
     pygame.mouse.set_visible(False)
@@ -126,8 +129,15 @@ def run(character_id):
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
                     is_paused = not is_paused
-                    pygame.mouse.set_visible(is_paused)      
-                    pygame.event.set_grab(not is_paused)     
+                    pygame.mouse.set_visible(True if is_paused else mouse_libre)      
+                    pygame.event.set_grab(False if is_paused else not mouse_libre)     
+
+                # TECLA CTRL: Interrumpe el bloqueo del mouse
+                if event.key == K_LCTRL or event.key == K_RCTRL:
+                    if not is_paused:
+                        mouse_libre = not mouse_libre
+                        pygame.mouse.set_visible(mouse_libre)
+                        pygame.event.set_grab(not mouse_libre)
 
                 if not is_paused:
                     if event.key == K_SPACE:
@@ -145,8 +155,9 @@ def run(character_id):
                 
                 if "resume" in botones and botones["resume"].collidepoint(mx, my):
                     is_paused = False
-                    pygame.mouse.set_visible(False)
-                    pygame.event.set_grab(True)
+                    # Al reanudar, restauramos el estado que el usuario tenía antes de la pausa
+                    pygame.mouse.set_visible(mouse_libre)
+                    pygame.event.set_grab(not mouse_libre)
                 elif "change_char" in botones and botones["change_char"].collidepoint(mx, my):
                     return "CHAR_SELECT" 
                 elif "controls" in botones and botones["controls"].collidepoint(mx, my):
@@ -157,10 +168,13 @@ def run(character_id):
                     return "MAIN_MENU" 
 
             if event.type == MOUSEMOTION and not is_paused:
-                dx, dy = event.rel
-                camera.process_mouse(dx, dy)
+                botones_mouse = pygame.mouse.get_pressed()
+                # Clic derecho (índice 2) presionado para mover si el mouse está libre
+                if not mouse_libre or botones_mouse[2]:
+                    dx, dy = event.rel
+                    camera.process_mouse(dx, dy)
 
-        # ── LÓGICA DE JUEGO (Solo si no está en pausa) ───────────
+        # ── LÓGICA DE JUEGO ───────────────────────────────────────
         if not is_paused:
             keys = pygame.key.get_pressed()
             speed = 4.0 * dt
@@ -187,7 +201,15 @@ def run(character_id):
             _set_movimiento(player, 2 if moving else 1)
             player.update(dt)
             
-            # Actualizamos y verificamos colisiones del nivel
+            if hasattr(player, 'y'):
+                if player.y < 1.5:      # Si el personaje cae más abajo de sus rodillas/pies
+                    player.y = 1.5      # Lo detenemos exactamente sobre el piso
+                    player.en_aire = False
+                    if hasattr(player, 'vel_y'):
+                        player.vel_y = 0
+            
+
+            
             world.update(dt)
             world.check_collision(player) 
 
@@ -199,12 +221,12 @@ def run(character_id):
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
         
-        # ILUMINACIÓN DINÁMICA (Efecto de pérdida de concentración)
+        # Efecto dinámico de iluminación basado en concentración
         luz_int = max(0.1, player.concentracion / 100.0)
         glLightfv(GL_LIGHT0, GL_DIFFUSE, [luz_int, luz_int, luz_int, 1.0])
         glLightfv(GL_LIGHT0, GL_AMBIENT, [luz_int * 0.3, luz_int * 0.3, luz_int * 0.3, 1.0])
 
-        camera.apply(player.x, getattr(player, 'y', 0), player.z)
+        camera.apply(player.x, getattr(player, 'y', 0), player.z, limits=(world.limit_x, world.limit_z))
 
         world.draw()
         player.draw()
@@ -226,7 +248,6 @@ def run(character_id):
 
         hud = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         hud.fill((0, 0, 0, 0))
-        # Le pasamos el 'player' para que lea la concentración
         draw_ui(hud, character_id, is_paused, mx, my, player) 
         
         hud_data = pygame.image.tobytes(hud, "RGBA", True)
