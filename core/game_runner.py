@@ -1,7 +1,8 @@
 """
-core/game_runner.py — Loop principal del Nivel 1: The Blue Light Mirror
+core/game_runner.py — Loop principal del Nivel: The Blue Light Mirror
 Integra: HUD modular, zoom con rueda del mouse, pantalla de controles,
-toggle de sonido desde pausa, y obstaculos que persiguen al jugador.
+toggle de sonido desde pausa, obstaculos que persiguen al jugador,
+y soporte para multiples stages (school, house, park).
 """
 import pygame
 from pygame.locals import *
@@ -14,7 +15,27 @@ from ui.hud import HUD
 import math
 import sys
 
-from stages.school import School
+from stages.school      import School
+from stages.stage_house import StageHouse
+from stages.stage_park  import StagePark
+
+# ===========================================================================
+# MAPA DE STAGES — agrega aqui nuevos stages sin tocar el resto del código
+# ===========================================================================
+STAGE_CLASSES = {
+    "school":      School,
+    "stage_house": StageHouse,
+    "stage_park":  StagePark,
+}
+
+STAGE_ORDER = ["school", "stage_house", "stage_park"]
+
+STAGE_NOMBRES = {
+    "school":      "Nivel 1 — La Escuela",
+    "stage_house": "Nivel 2 — La Casa",
+    "stage_park":  "Nivel 3 — El Parque",
+}
+
 
 # ===========================================================================
 # PANTALLA DE CONTROLES
@@ -48,14 +69,13 @@ def draw_controls_screen(surface):
         ("1 - 5",           "Cambiar expresion del personaje"),
         ("",             ""),
         ("OBJETIVO",     ""),
-        ("META VERDE",      "Llega al circulo verde del aula"),
+        ("META BRILLANTE",  "Llega al circulo del nivel"),
         ("EVITAR",          "No dejes que las distracciones te alcancen"),
     ]
 
     y = 130
     for tecla, desc in controles:
         if desc == "" and tecla != "":
-            # Es un encabezado de seccion
             s = font_body.render(f"— {tecla} —", True, (0, 180, 255))
             surface.blit(s, (WIDTH // 2 - s.get_width() // 2, y))
             y += 32
@@ -84,7 +104,64 @@ def draw_controls_screen(surface):
 
 
 # ===========================================================================
-# MENU DE PAUSA (con toggle de sonido integrado)
+# PANTALLA DE SELECCIÓN DE NIVEL
+# ===========================================================================
+def draw_level_select(surface, mx, my, stage_actual):
+    font_title = pygame.font.SysFont("monospace", 38, bold=True)
+    font_body  = pygame.font.SysFont("monospace", 18, bold=True)
+    font_small = pygame.font.SysFont("monospace", 14)
+
+    overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+    overlay.fill((0, 10, 25, 235))
+    surface.blit(overlay, (0, 0))
+
+    t = font_title.render("SELECCIONAR NIVEL", True, (128, 196, 255))
+    surface.blit(t, (WIDTH // 2 - t.get_width() // 2, 70))
+
+    botones = {}
+    btn_w, btn_h = 380, 52
+    start_y = 160
+
+    colores = {
+        "school":      ((0, 100, 180), (0, 50, 100),  (100, 180, 255)),
+        "stage_house": ((120, 60, 20), (60, 30, 10),  (255, 160, 80)),
+        "stage_park":  ((20, 120, 40), (10, 60, 20),  (80, 220, 100)),
+    }
+
+    for i, stage_id in enumerate(STAGE_ORDER):
+        rect   = pygame.Rect(WIDTH // 2 - btn_w // 2, start_y + i * 70, btn_w, btn_h)
+        hover  = rect.collidepoint(mx, my)
+        activo = stage_id == stage_actual
+        c_h, c_b, c_border = colores[stage_id]
+
+        color_fondo = tuple(min(255, v + 40) for v in c_h) if activo else (c_h if hover else c_b)
+        pygame.draw.rect(surface, color_fondo, rect, border_radius=8)
+        pygame.draw.rect(surface, c_border, rect, 2 if not activo else 3, border_radius=8)
+
+        nombre = STAGE_NOMBRES[stage_id]
+        if activo:
+            nombre = "▶ " + nombre + " (actual)"
+        txt = font_body.render(nombre, True, (255, 255, 255))
+        surface.blit(txt, (rect.centerx - txt.get_width() // 2,
+                           rect.centery - txt.get_height() // 2))
+        botones[stage_id] = rect
+
+    # Botón cerrar
+    bw2, bh2 = 200, 44
+    rect_cerrar = pygame.Rect(WIDTH // 2 - bw2 // 2, start_y + len(STAGE_ORDER) * 70 + 20, bw2, bh2)
+    hover_c = rect_cerrar.collidepoint(mx, my)
+    pygame.draw.rect(surface, (50, 50, 50) if hover_c else (20, 20, 20), rect_cerrar, border_radius=8)
+    pygame.draw.rect(surface, (150, 150, 150), rect_cerrar, 1, border_radius=8)
+    lbl = font_body.render("CANCELAR", True, (200, 200, 200))
+    surface.blit(lbl, (rect_cerrar.centerx - lbl.get_width() // 2,
+                       rect_cerrar.centery - lbl.get_height() // 2))
+    botones["cancel"] = rect_cerrar
+
+    return botones
+
+
+# ===========================================================================
+# MENU DE PAUSA
 # ===========================================================================
 def draw_pause_menu(surface, mx, my, sonido_activo):
     font_title = pygame.font.SysFont("monospace", 48, bold=True)
@@ -99,20 +176,20 @@ def draw_pause_menu(surface, mx, my, sonido_activo):
 
     etiqueta_sonido = "SONIDO: ON" if sonido_activo else "SONIDO: OFF"
     config_botones = [
-        ("resume",      "CONTINUAR",             (0, 60, 120),   (0, 30, 60),   (128, 196, 255)),
-        ("change_char", "CAMBIAR PERSONAJE",      (0, 80, 80),    (0, 40, 40),   (100, 255, 200)),
-        ("controls",    "CONTROLES",              (40, 40, 100),  (20, 20, 60),  (180, 180, 255)),
-        ("sound",       etiqueta_sonido,          (40, 80, 40),   (20, 40, 20),  (100, 220, 100)),
-        ("exit",        "SALIR AL MENU PRINCIPAL",(120, 30, 30),  (60, 15, 15),  (255, 100, 100)),
+        ("resume",       "CONTINUAR",              (0, 60, 120),   (0, 30, 60),   (128, 196, 255)),
+        ("change_char",  "CAMBIAR PERSONAJE",       (0, 80, 80),    (0, 40, 40),   (100, 255, 200)),
+        ("change_level", "CAMBIAR NIVEL",           (60, 40, 100),  (30, 20, 60),  (180, 140, 255)),
+        ("controls",     "CONTROLES",               (40, 40, 100),  (20, 20, 60),  (180, 180, 255)),
+        ("sound",        etiqueta_sonido,           (40, 80, 40),   (20, 40, 20),  (100, 220, 100)),
+        ("exit",         "SALIR AL MENU PRINCIPAL", (120, 30, 30),  (60, 15, 15),  (255, 100, 100)),
     ]
 
     botones = {}
-    start_y = HEIGHT // 2 - 90
-    btn_w, btn_h, spacing = 340, 46, 58
+    start_y = HEIGHT // 2 - 110
+    btn_w, btn_h, spacing = 340, 46, 56
 
-    for btn_id, text, c_hover, c_base, c_border in config_botones:
-        idx = list(b[0] for b in config_botones).index(btn_id)
-        rect = pygame.Rect(WIDTH // 2 - btn_w // 2, start_y + idx * spacing, btn_w, btn_h)
+    for idx, (btn_id, text, c_hover, c_base, c_border) in enumerate(config_botones):
+        rect  = pygame.Rect(WIDTH // 2 - btn_w // 2, start_y + idx * spacing, btn_w, btn_h)
         hover = rect.collidepoint(mx, my)
         pygame.draw.rect(surface, c_hover if hover else c_base, rect, border_radius=6)
         pygame.draw.rect(surface, c_border, rect, 2, border_radius=6)
@@ -140,38 +217,51 @@ def init_opengl():
 
 
 # ===========================================================================
+# CARGAR STAGE
+# ===========================================================================
+def _load_stage(stage_id, player):
+    """Instancia el stage pedido y posiciona al jugador en su spawn."""
+    cls = STAGE_CLASSES.get(stage_id, School)
+    world = cls()
+    spawn_x, spawn_z = world.get_spawn()
+    player.x = spawn_x
+    player.z = spawn_z
+    if hasattr(player, "y"):
+        player.y = 1.5
+    player.concentracion = 100.0
+    return world
+
+
+# ===========================================================================
 # LOOP PRINCIPAL
 # ===========================================================================
-def run(character_id):
+def run(character_id, stage_id="school"):
     pygame.init()
 
     if pygame.mixer.get_init() and pygame.mixer.music.get_busy():
         pygame.mixer.music.fadeout(800)
 
     screen = pygame.display.set_mode((WIDTH, HEIGHT), DOUBLEBUF | OPENGL)
-    pygame.display.set_caption(f"The Blue Light Mirror — Nivel 1 — {character_id.upper()}")
+    pygame.display.set_caption(
+        f"The Blue Light Mirror — {STAGE_NOMBRES.get(stage_id, stage_id)} — {character_id.upper()}"
+    )
 
     init_opengl()
 
     player = get_character(character_id)
     player.concentracion = 100.0
-    spawn_x, spawn_z = School.get_spawn()
-    player.x = spawn_x
-    player.z = spawn_z
-    if hasattr(player, "y"):
-        player.y = 1.5
 
     camera = CinematicCamera()
-    world  = School()
+    world  = _load_stage(stage_id, player)
     hud    = HUD()
 
-    is_paused      = False
-    show_controls  = False
-    mouse_libre    = False
-    sonido_activo  = True
-    clock          = pygame.time.Clock()
+    is_paused       = False
+    show_controls   = False
+    show_levels     = False
+    mouse_libre     = False
+    sonido_activo   = True
+    clock           = pygame.time.Clock()
 
-    # Intentar reanudar musica al entrar al nivel
     try:
         if pygame.mixer.get_init():
             pygame.mixer.music.load("assets/audio/musica_miedo.mp3")
@@ -185,7 +275,7 @@ def run(character_id):
 
     # -----------------------------------------------------------------------
     while True:
-        dt  = clock.tick(60) / 1000.0
+        dt     = clock.tick(60) / 1000.0
         mx, my = pygame.mouse.get_pos()
 
         # ── EVENTOS ────────────────────────────────────────────────────────
@@ -193,15 +283,13 @@ def run(character_id):
             if event.type == QUIT:
                 pygame.quit(); sys.exit()
 
-            # ---- Rueda del mouse: ZOOM ----
             if event.type == MOUSEBUTTONDOWN:
-                if event.button == 4:   # scroll up -> acercar
+                if event.button == 4:
                     camera.process_scroll(1)
-                elif event.button == 5: # scroll down -> alejar
+                elif event.button == 5:
                     camera.process_scroll(-1)
 
-                # Clic izquierdo sobre botones de pausa
-                if event.button == 1 and is_paused and not show_controls:
+                if event.button == 1 and is_paused and not show_controls and not show_levels:
                     botones = draw_pause_menu(pygame.Surface((1, 1)), 0, 0, sonido_activo)
                     if botones["resume"].collidepoint(mx, my):
                         is_paused = False
@@ -209,6 +297,10 @@ def run(character_id):
                         pygame.event.set_grab(not mouse_libre)
                     elif botones["change_char"].collidepoint(mx, my):
                         return "CHAR_SELECT"
+                    elif botones["change_level"].collidepoint(mx, my):
+                        show_levels = True
+                        pygame.mouse.set_visible(True)
+                        pygame.event.set_grab(False)
                     elif botones["controls"].collidepoint(mx, my):
                         show_controls = True
                         pygame.mouse.set_visible(True)
@@ -216,12 +308,33 @@ def run(character_id):
                     elif botones["sound"].collidepoint(mx, my):
                         sonido_activo = not sonido_activo
                         if pygame.mixer.get_init():
-                            vol = 0.4 if sonido_activo else 0.0
-                            pygame.mixer.music.set_volume(vol)
+                            pygame.mixer.music.set_volume(0.4 if sonido_activo else 0.0)
                     elif botones["exit"].collidepoint(mx, my):
                         return "MAIN_MENU"
 
-                # Clic en pantalla de controles: cerrar
+                # Pantalla de selección de nivel
+                if event.button == 1 and show_levels:
+                    bots_levels = draw_level_select(
+                        pygame.Surface((WIDTH, HEIGHT)), mx, my, stage_id
+                    )
+                    for sid, rect in bots_levels.items():
+                        if rect.collidepoint(mx, my):
+                            if sid == "cancel":
+                                show_levels = False
+                            elif sid in STAGE_CLASSES:
+                                # Cambia de nivel sin salir
+                                stage_id = sid
+                                world = _load_stage(stage_id, player)
+                                hud   = HUD()
+                                pygame.display.set_caption(
+                                    f"The Blue Light Mirror — {STAGE_NOMBRES[stage_id]} — {character_id.upper()}"
+                                )
+                                show_levels = False
+                                is_paused   = False
+                                pygame.mouse.set_visible(False)
+                                pygame.event.set_grab(True)
+                            break
+
                 if event.button == 1 and show_controls:
                     cerrar_rect = draw_controls_screen(pygame.Surface((WIDTH, HEIGHT)))
                     if cerrar_rect.collidepoint(mx, my):
@@ -229,31 +342,32 @@ def run(character_id):
 
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
-                    if show_controls:
+                    if show_controls or show_levels:
                         show_controls = False
+                        show_levels   = False
                     else:
                         is_paused = not is_paused
                         pygame.mouse.set_visible(True if is_paused else mouse_libre)
                         pygame.event.set_grab(False if is_paused else not mouse_libre)
 
                 if event.key in (K_LCTRL, K_RCTRL):
-                    if not is_paused and not show_controls:
+                    if not is_paused and not show_controls and not show_levels:
                         mouse_libre = not mouse_libre
                         pygame.mouse.set_visible(mouse_libre)
                         pygame.event.set_grab(not mouse_libre)
 
-                if not is_paused and not show_controls:
+                if not is_paused and not show_controls and not show_levels:
                     if event.key == K_SPACE:
                         if hasattr(player, "en_aire") and not player.en_aire:
                             player.vel_y = 0.6
                             player.en_aire = True
-                            if hasattr(player, "movimiento"):       player.movimiento = 3
+                            if hasattr(player, "movimiento"):        player.movimiento = 3
                             if hasattr(player, "movimiento_actual"): player.movimiento_actual = 3
                     for k, v in [(K_1,1),(K_2,2),(K_3,3),(K_4,4),(K_5,5)]:
                         if event.key == k:
                             _set_expresion(player, v)
 
-            if event.type == MOUSEMOTION and not is_paused and not show_controls:
+            if event.type == MOUSEMOTION and not is_paused and not show_controls and not show_levels:
                 botones_mouse = pygame.mouse.get_pressed()
                 if not mouse_libre or botones_mouse[2]:
                     dx, dy = event.rel
@@ -261,7 +375,8 @@ def run(character_id):
 
         # ── LOGICA ─────────────────────────────────────────────────────────
         derrota      = player.concentracion <= 0
-        juego_activo = not is_paused and not show_controls                        and not world.meta_alcanzada and not derrota
+        juego_activo = (not is_paused and not show_controls and not show_levels
+                        and not world.meta_alcanzada and not derrota)
 
         if juego_activo:
             keys = pygame.key.get_pressed()
@@ -297,7 +412,6 @@ def run(character_id):
                 player.rotacion_cuerpo = math.degrees(math.atan2(-move_x, -move_z)) + 180
                 if not (keys[K_LSHIFT] or keys[K_RSHIFT] or keys[K_RCTRL]):
                     _set_movimiento(player, 2)
-                # Recuperacion: caminar sin distracciones cerca restaura concentracion
                 alguna_persigue = any(getattr(d, "persiguiendo", False) for d in world.distracciones)
                 if not alguna_persigue:
                     player.concentracion = min(100.0, player.concentracion + 3.0 * dt)
@@ -319,8 +433,7 @@ def run(character_id):
             world.check_collision(player)
             hud.update(dt, player.concentracion)
 
-        elif not is_paused and not show_controls:
-            # Victoria o derrota: mundo sigue animandose, jugador congelado
+        elif not is_paused and not show_controls and not show_levels:
             world.update(dt)
             hud.update(dt, player.concentracion)
 
@@ -332,7 +445,6 @@ def run(character_id):
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
-        # Iluminacion dinamica segun concentracion
         luz_int = max(0.1, player.concentracion / 100.0)
         glLightfv(GL_LIGHT0, GL_DIFFUSE, [luz_int, luz_int, luz_int, 1.0])
         glLightfv(GL_LIGHT0, GL_AMBIENT, [luz_int * 0.3, luz_int * 0.3, luz_int * 0.3, 1.0])
@@ -356,11 +468,14 @@ def run(character_id):
                  meta_alcanzada=world.meta_alcanzada,
                  derrota=derrota)
 
-        if is_paused and not show_controls:
+        if is_paused and not show_controls and not show_levels:
             draw_pause_menu(hud_surf, mx, my, sonido_activo)
 
         if show_controls:
             draw_controls_screen(hud_surf)
+
+        if show_levels:
+            draw_level_select(hud_surf, mx, my, stage_id)
 
         hud_data = pygame.image.tobytes(hud_surf, "RGBA", True)
         glRasterPos2i(0, 0)
