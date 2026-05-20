@@ -27,19 +27,19 @@ class StagePark:
         self.items     = Items()
 
         self.npcs = [
-            NPC(  8, 0, 10, (0.4, 0.4, 0.5), 0.05),
-            NPC( -4, 0,  4, (0.3, 0.3, 0.3), 0.08),
+            NPC(  8, 0, 10, (0.4, 0.4, 0.5), 0.02),
+            NPC( -4, 0,  4, (0.3, 0.3, 0.3), 0.03),
             NPC( 14, 0, -6, (0.2, 0.2, 0.4), 0.1),
         ]
 
         # OBJETOS REALES DE LAS MISIONES DEL PARQUE
         self.distracciones = [
-            DigitalDistraction( 10.0,  20.0, 0.9, "kiosk"),      # Kiosco interactivo
-            DigitalDistraction( -8.0,  12.0, 1.0, "billboard"),  # Gran Valla publicitaria LED
-            DigitalDistraction( -20.0, -2.0, 0.8, "fountain"),   # La Fuente central 3D
-            DigitalDistraction( -6.0,  -6.0, 0.9, "npc_phone"),  # El NPC absorto en su pantalla
-            DigitalDistraction(  6.0, -14.0, 1.0, "signal"),     # La Torre WiFi de señal
-            DigitalDistraction(-18.0, -18.0, 0.8, "rest"),       # Banca del parque para descansar
+            DigitalDistraction( 10.0,  20.0, 0.3, "kiosk"),      # Kiosco interactivo
+            DigitalDistraction( -8.0,  12.0, 0.3, "billboard"),  # Gran Valla publicitaria LED
+            DigitalDistraction( -20.0, -2.0, 0.3, "fountain"),   # La Fuente central 3D
+            DigitalDistraction( -6.0,  -6.0, 0.4, "npc_phone"),  # El NPC absorto en su pantalla
+            DigitalDistraction(  6.0, -14.0, 0.3, "signal"),     # La Torre WiFi de señal
+            DigitalDistraction(-18.0, -18.0, 0.3, "rest"),       # Banca del parque para descansar
         ]
 
         self.objetos_colisionables = self.npcs + self.distracciones

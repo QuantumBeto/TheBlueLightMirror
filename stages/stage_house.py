@@ -28,19 +28,19 @@ class StageHouse:
 
         # NPCs de la casa
         self.npcs = [
-            NPC(  5, 0,  6, (0.4, 0.4, 0.5), 0.05),
-            NPC( -5, 0,  0, (0.3, 0.3, 0.3), 0.08),
+            NPC(  5, 0,  6, (0.4, 0.4, 0.5), 0.02),
+            NPC( -5, 0,  0, (0.3, 0.3, 0.3), 0.03),
             NPC(  2, 0, -8, (0.2, 0.2, 0.4), 0.1),
         ]
 
         # OBJETOS REALES DE LAS MISIONES DE LA CASA
         self.distracciones = [
-            DigitalDistraction(  8.0,  18.0, 0.9, "phone"),      # Teléfono personal
-            DigitalDistraction( -6.0,  10.0, 1.0, "tv"),         # Televisión de la sala
-            DigitalDistraction( 12.0,   2.0, 0.8, "computer"),   # Computadora del estudio
-            DigitalDistraction( -8.0,  -4.0, 0.9, "sleep"),      # Cama para descansar
-            DigitalDistraction(  5.0, -10.0, 1.0, "mirror"),     # ¡El Espejo Azul narrativo!
-            DigitalDistraction(-14.0, -14.0, 0.8, "lamp"),       # Lámpara de 6500K
+            DigitalDistraction(  8.0,  18.0, 0.2, "phone"),      # Teléfono personal
+            DigitalDistraction( -6.0,  10.0, 0.3, "tv"),         # Televisión de la sala
+            DigitalDistraction( 12.0,   2.0, 0.3, "computer"),   # Computadora del estudio
+            DigitalDistraction( -8.0,  -4.0, 0.3, "sleep"),      # Cama para descansar
+            DigitalDistraction(  5.0, -10.0, 0.3, "mirror"),     # ¡El Espejo Azul narrativo!
+            DigitalDistraction(-14.0, -14.0, 0.3, "lamp"),       # Lámpara de 6500K
         ]
 
         self.objetos_colisionables = self.npcs + self.distracciones

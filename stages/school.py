@@ -27,19 +27,19 @@ class School:
 
         # NPCs (Zombis digitales - lentos y oscuros)
         self.npcs = [
-            NPC(  4, 0,  8, (0.2, 0.2, 0.3), 0.05),
-            NPC( -6, 0,  0, (0.3, 0.2, 0.2), 0.08),
+            NPC(  4, 0,  8, (0.2, 0.2, 0.3), 0.03),
+            NPC( -6, 0,  0, (0.3, 0.2, 0.2), 0.02),
             NPC(  8, 0, -4, (0.1, 0.3, 0.2), 0.1),
         ]
 
         # OBJETOS REALES DE LAS MISIONES DE LA ESCUELA
         self.distracciones = [
-            DigitalDistraction(  6.0,  18.0, 0.9, "phone"),      # Misión A
-            DigitalDistraction( -7.0,  10.0, 1.0, "computer"),   # Misión B
-            DigitalDistraction( 10.0,   2.0, 0.8, "tv"),         # Misión A
-            DigitalDistraction( -9.0,  -4.0, 0.9, "rest"),       # Misión C
-            DigitalDistraction(  4.0, -12.0, 1.0, "mirror"),     # Misión C (El Espejo Azul)
-            DigitalDistraction(-16.0, -16.0, 0.8, "lamp"),       # Misión B
+            DigitalDistraction(  6.0,  18.0, 0.5, "phone"),      # Misión A
+            DigitalDistraction( -7.0,  10.0, 0.3, "computer"),   # Misión B
+            DigitalDistraction( 10.0,   2.0, 0.3, "tv"),         # Misión A
+            DigitalDistraction( -9.0,  -4.0, 0.3, "rest"),       # Misión C
+            DigitalDistraction(  4.0, -12.0, 0.3, "mirror"),     # Misión C (El Espejo Azul)
+            DigitalDistraction(-16.0, -16.0, 0.3, "lamp"),       # Misión B
         ]
 
         self.objetos_colisionables = self.npcs + self.distracciones
