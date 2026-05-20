@@ -24,27 +24,29 @@ def run_menu(estado_inicial="MAIN"):
         menu.state = "MAIN"
 
     selected_character_id = None
+    selected_stage_id = None
     running = True
     
     while running:
         events = pygame.event.get()
         menu.handle_events(events)
 
-        char_id = menu.update()
-        if char_id:
-            selected_character_id = char_id
+        resultado = menu.update()
+        # Ahora el menú devuelve una tupla con (personaje, nivel)
+        if resultado:
+            selected_character_id, selected_stage_id = resultado
             running = False
 
         menu.draw()
         pygame.display.flip()
         clock.tick(FPS)
 
-    return selected_character_id
+    return selected_character_id, selected_stage_id
 
-def start_3d_game(character_id):
+def start_3d_game(character_id, stage_id):
     from core.game_runner import run
-    # 'run' ahora devuelve "MAIN_MENU" o "CHAR_SELECT"
-    return run(character_id)
+    # 'run' ahora recibe también el stage_id y devuelve "MAIN_MENU" o "CHAR_SELECT"
+    return run(character_id, stage_id)
 
 if __name__ == "__main__":
     # Bucle Maestro: Mantiene el juego abierto navegando entre pantallas
@@ -58,12 +60,12 @@ if __name__ == "__main__":
             if estado_siguiente == "MAIN_MENU":
                 estado_siguiente = "MAIN"
                 
-            # Ejecuta el menú y devuelve el personaje elegido
-            chosen_char = run_menu(estado_inicial=estado_siguiente)
+            # Ejecuta el menú y devuelve el personaje y el nivel elegidos
+            chosen_char, chosen_stage = run_menu(estado_inicial=estado_siguiente)
             
-            if chosen_char:
+            if chosen_char and chosen_stage:
                 # Arranca el 3D. Al pausar y salir, esto devolverá el nuevo destino
-                estado_siguiente = start_3d_game(chosen_char)
+                estado_siguiente = start_3d_game(chosen_char, chosen_stage)
             else:
                 # Si cierra la ventana desde el menú
                 break 

@@ -25,25 +25,24 @@ class School:
         self.furniture = Furniture()
         self.items     = Items()
 
-        # NPCs dentro del patio central (x: -12..12, z: -12..15)
+        # NPCs (Zombis digitales - lentos y oscuros)
         self.npcs = [
-            NPC(  4, 0,  8, (0.2, 0.4, 0.8), 0.5),
-            NPC( -6, 0,  0, (0.8, 0.3, 0.5), 0.8),
-            NPC(  8, 0, -4, (0.3, 0.7, 0.4), 1.2),
+            NPC(  4, 0,  8, (0.2, 0.2, 0.3), 0.05),
+            NPC( -6, 0,  0, (0.3, 0.2, 0.2), 0.08),
+            NPC(  8, 0, -4, (0.1, 0.3, 0.2), 0.1),
         ]
 
-        # 6 distracciones distribuidas a lo largo del recorrido
+        # OBJETOS REALES DE LAS MISIONES DE LA ESCUELA
         self.distracciones = [
-            DigitalDistraction(  6.0,  18.0, 0.9, "red_social"),
-            DigitalDistraction( -7.0,  10.0, 1.0, "celular"),
-            DigitalDistraction( 10.0,   2.0, 0.8, "campana"),
-            DigitalDistraction( -9.0,  -4.0, 0.9, "notif"),
-            DigitalDistraction(  4.0, -12.0, 1.0, "celular"),
-            DigitalDistraction(-16.0, -16.0, 0.8, "campana"),
+            DigitalDistraction(  6.0,  18.0, 0.9, "phone"),      # Misión A
+            DigitalDistraction( -7.0,  10.0, 1.0, "computer"),   # Misión B
+            DigitalDistraction( 10.0,   2.0, 0.8, "tv"),         # Misión A
+            DigitalDistraction( -9.0,  -4.0, 0.9, "rest"),       # Misión C
+            DigitalDistraction(  4.0, -12.0, 1.0, "mirror"),     # Misión C (El Espejo Azul)
+            DigitalDistraction(-16.0, -16.0, 0.8, "lamp"),       # Misión B
         ]
 
         self.objetos_colisionables = self.npcs + self.distracciones
-
         self.meta_alcanzada = False
         self._meta_pulse    = 0.0
 
@@ -88,9 +87,94 @@ class School:
         self._construir_primer_piso()
         self.furniture.draw()
         self.items.draw()
-        for obj in self.objetos_colisionables:
-            obj.draw()
+        
+        # Dibujar los elementos interactivos reales
+        for obj in self.distracciones:
+            self._draw_custom_object(obj)
+            
+        for npc in self.npcs:
+            npc.draw()
+            
         self._draw_meta()
+
+    # -------------------------------------------------------
+    # DIBUJO AVANZADO DE LOS OBJETOS SEGÚN SU MISIÓN
+    # -------------------------------------------------------
+    def _draw_custom_object(self, obj):
+        glPushMatrix()
+        glTranslatef(obj.x, 0, obj.z)
+        q = gluNewQuadric()
+
+        # Dibujar siempre el área de peligro en el suelo (radio rojo)
+        glDisable(GL_LIGHTING)
+        glColor3f(0.8, 0.1, 0.1)
+        glBegin(GL_LINE_LOOP)
+        for i in range(16):
+            a = 2 * math.pi * i / 16
+            glVertex3f(4.0 * math.cos(a), 0.02, 4.0 * math.sin(a))
+        glEnd()
+        glEnable(GL_LIGHTING)
+
+        # Geometría personalizada según el tipo
+        if obj.tipo == "mirror":
+            # El Espejo Azul: Un marco negro con un cristal azul brillante
+            glColor3f(0.1, 0.1, 0.1)
+            glPushMatrix(); glScalef(1.2, 3.0, 0.2); self._cube_mesh(); glPopMatrix()
+            glColor3f(0.0, 0.6, 1.0)
+            glPushMatrix(); glTranslatef(0, 0, 0.11); glScalef(0.9, 2.6, 0.02); self._cube_mesh(); glPopMatrix()
+            
+        elif obj.tipo == "tv":
+            # Televisor colgante o sobre mesa alta
+            glColor3f(0.05, 0.05, 0.05)
+            glPushMatrix(); glTranslatef(0, 2.0, 0); glScalef(2.5, 1.5, 0.3); self._cube_mesh(); glPopMatrix()
+            glColor3f(0.2, 0.5, 0.8) # Brillo encendido
+            glPushMatrix(); glTranslatef(0, 2.0, 0.16); glScalef(2.3, 1.3, 0.02); self._cube_mesh(); glPopMatrix()
+
+        elif obj.tipo == "computer":
+            # Escritorio de computación escolar
+            glColor3f(0.2, 0.2, 0.2) # Mesa gris
+            glPushMatrix(); glTranslatef(0, 0.8, 0); glScalef(2.0, 0.1, 1.0); self._cube_mesh(); glPopMatrix()
+            glColor3f(0.05, 0.05, 0.05) # Monitor negro
+            glPushMatrix(); glTranslatef(0, 1.4, 0); glScalef(1.0, 0.7, 0.1); self._cube_mesh(); glPopMatrix()
+
+        elif obj.tipo == "rest":
+            # Banca de pasillo
+            glColor3f(0.15, 0.15, 0.15)
+            glPushMatrix(); glTranslatef(0, 0.5, 0); glScalef(3.0, 0.1, 0.8); self._cube_mesh(); glPopMatrix()
+            glPushMatrix(); glTranslatef(0, 1.0, -0.35); glScalef(3.0, 0.8, 0.1); self._cube_mesh(); glPopMatrix()
+
+        elif obj.tipo == "lamp":
+            # Poste de luz del pasillo
+            glColor3f(0.1, 0.1, 0.1)
+            glRotatef(-90, 1, 0, 0)
+            gluCylinder(q, 0.05, 0.05, 3.0, 8, 1)
+            glTranslatef(0, 0, 3.0)
+            glColor3f(0.8, 0.9, 1.0) # Luz fría de tubo
+            gluSphere(q, 0.2, 12, 12)
+
+        else:
+            # Teléfono: Caja flotante clásica
+            glColor3f(0.1, 0.4, 0.8)
+            glTranslatef(0, 1.2, 0)
+            glScalef(0.3, 0.6, 0.05)
+            self._cube_mesh()
+
+        glPopMatrix()
+
+    def _cube_mesh(self):
+        glBegin(GL_QUADS)
+        faces = [
+            (0,0,1, (-0.5,-0.5,0.5),(0.5,-0.5,0.5),(0.5,0.5,0.5),(-0.5,0.5,0.5)),
+            (0,0,-1, (-0.5,-0.5,-0.5),(-0.5,0.5,-0.5),(0.5,0.5,-0.5),(0.5,-0.5,-0.5)),
+            (0,1,0, (-0.5,0.5,-0.5),(0.5,0.5,-0.5),(0.5,0.5,0.5),(-0.5,0.5,0.5)),
+            (0,-1,0, (-0.5,-0.5,-0.5),(0.5,-0.5,-0.5),(0.5,-0.5,0.5),(-0.5,-0.5,0.5)),
+            (1,0,0, (0.5,-0.5,-0.5),(0.5,0.5,-0.5),(0.5,0.5,0.5),(0.5,-0.5,0.5)),
+            (-1,0,0, (-0.5,-0.5,-0.5),(-0.5,-0.5,0.5),(-0.5,0.5,0.5),(-0.5,0.5,-0.5)),
+        ]
+        for nx,ny,nz,v0,v1,v2,v3 in faces:
+            glNormal3f(nx,ny,nz)
+            for v in (v0,v1,v2,v3): glVertex3f(*v)
+        glEnd()
 
     # -------------------------------------------------------
     # META
@@ -126,11 +210,11 @@ class School:
         glEnable(GL_LIGHTING)
 
     # -------------------------------------------------------
-    # SUELO
+    # ESTRUCTURA DE LA ESCUELA (Suelo y Paredes Exteriores)
     # -------------------------------------------------------
     def _draw_floor_base(self):
         glDisable(GL_LIGHTING)
-        glColor3f(0.85, 0.85, 0.82)
+        glColor3f(0.1, 0.1, 0.12) # Concreto oscuro/sucio
         glBegin(GL_QUADS)
         glVertex3f(-self.limit_x, 0, -self.limit_z)
         glVertex3f( self.limit_x, 0, -self.limit_z)
@@ -139,51 +223,54 @@ class School:
         glEnd()
         glEnable(GL_LIGHTING)
 
-    # -------------------------------------------------------
-    # PAREDES — quads planos, una sola cara cada una
-    # -------------------------------------------------------
     def _draw_walls(self):
         lx = self.limit_x
         lz = self.limit_z
-        h  = self.wall_height * 2   # 16 unidades de alto
+        h  = self.wall_height * 2 
 
         glDisable(GL_LIGHTING)
-        glColor3f(0.88, 0.86, 0.80)
+        glColor3f(0.15, 0.15, 0.18) # Muros grises y asfixiantes
 
         glBegin(GL_QUADS)
-        # Pared norte  (z = -lz), vista desde interior → normal +Z
         glNormal3f(0, 0, 1)
-        glVertex3f(-lx, 0,  -lz)
-        glVertex3f( lx, 0,  -lz)
-        glVertex3f( lx,  h, -lz)
-        glVertex3f(-lx,  h, -lz)
-
-        # Pared sur  (z = +lz), vista desde interior → normal -Z
+        glVertex3f(-lx, 0,  -lz); glVertex3f( lx, 0,  -lz); glVertex3f( lx,  h, -lz); glVertex3f(-lx,  h, -lz)
         glNormal3f(0, 0, -1)
-        glVertex3f( lx, 0,  lz)
-        glVertex3f(-lx, 0,  lz)
-        glVertex3f(-lx,  h, lz)
-        glVertex3f( lx,  h, lz)
-
-        # Pared oeste (x = -lx), vista desde interior → normal +X
+        glVertex3f( lx, 0,  lz); glVertex3f(-lx, 0,  lz); glVertex3f(-lx,  h, lz); glVertex3f( lx,  h, lz)
         glNormal3f(1, 0, 0)
-        glVertex3f(-lx, 0,  lz)
-        glVertex3f(-lx, 0, -lz)
-        glVertex3f(-lx,  h, -lz)
-        glVertex3f(-lx,  h, lz)
-
-        # Pared este  (x = +lx), vista desde interior → normal -X
+        glVertex3f(-lx, 0,  lz); glVertex3f(-lx, 0, -lz); glVertex3f(-lx,  h, -lz); glVertex3f(-lx,  h, lz)
         glNormal3f(-1, 0, 0)
-        glVertex3f( lx, 0, -lz)
-        glVertex3f( lx, 0,  lz)
-        glVertex3f( lx,  h, lz)
-        glVertex3f( lx,  h, -lz)
+        glVertex3f( lx, 0, -lz); glVertex3f( lx, 0,  lz); glVertex3f( lx,  h, lz); glVertex3f( lx,  h, -lz)
         glEnd()
-
         glEnable(GL_LIGHTING)
 
     # -------------------------------------------------------
-    # ZONAS DE COLOR EN EL SUELO
+    # MUROS INTERIORES (Para hacer el laberinto de la escuela)
+    # -------------------------------------------------------
+    def _draw_interior_wall(self, x, z, w, d, h=6.0):
+        glDisable(GL_LIGHTING)
+        glColor3f(0.12, 0.12, 0.15) # Gris más oscuro que el piso
+        
+        glBegin(GL_QUADS)
+        glNormal3f(0, 0, 1)
+        glVertex3f(x, 0, z+d); glVertex3f(x+w, 0, z+d)
+        glVertex3f(x+w, h, z+d); glVertex3f(x, h, z+d)
+        glNormal3f(0, 0, -1)
+        glVertex3f(x+w, 0, z); glVertex3f(x, 0, z)
+        glVertex3f(x, h, z); glVertex3f(x+w, h, z)
+        glNormal3f(-1, 0, 0)
+        glVertex3f(x, 0, z); glVertex3f(x, 0, z+d)
+        glVertex3f(x, h, z+d); glVertex3f(x, h, z)
+        glNormal3f(1, 0, 0)
+        glVertex3f(x+w, 0, z+d); glVertex3f(x+w, 0, z)
+        glVertex3f(x+w, h, z); glVertex3f(x+w, h, z+d)
+        glNormal3f(0, 1, 0)
+        glVertex3f(x, h, z); glVertex3f(x+w, h, z)
+        glVertex3f(x+w, h, z+d); glVertex3f(x, h, z+d)
+        glEnd()
+        glEnable(GL_LIGHTING)
+
+    # -------------------------------------------------------
+    # ZONAS (Aulas, pasillos, etc.)
     # -------------------------------------------------------
     def _draw_zone(self, x, y, z, w, h, d, color):
         glDisable(GL_LIGHTING)
@@ -192,26 +279,27 @@ class School:
         glVertex3f(x,   y+0.01, z);   glVertex3f(x+w, y+0.01, z)
         glVertex3f(x+w, y+0.01, z+d); glVertex3f(x,   y+0.01, z+d)
         glEnd()
-        glColor3f(color[0]*0.5, color[1]*0.5, color[2]*0.5)
+        # Líneas delimitadoras tétricas
+        glColor3f(color[0]*0.3, color[1]*0.3, color[2]*0.3)
         glLineWidth(1.5)
         glBegin(GL_LINE_LOOP)
         glVertex3f(x,   y+h, z);   glVertex3f(x+w, y+h, z)
         glVertex3f(x+w, y+h, z+d); glVertex3f(x,   y+h, z+d)
         glEnd()
-        glBegin(GL_LINES)
-        glVertex3f(x,   y, z);   glVertex3f(x,   y+h, z)
-        glVertex3f(x+w, y, z);   glVertex3f(x+w, y+h, z)
-        glVertex3f(x+w, y, z+d); glVertex3f(x+w, y+h, z+d)
-        glVertex3f(x,   y, z+d); glVertex3f(x,   y+h, z+d)
-        glEnd()
         glEnable(GL_LIGHTING)
 
     def _construir_planta_baja(self):
         y = 0.0; h = self.wall_height
-        c_aula  = (0.1, 0.3, 0.6); c_patio  = (0.2, 0.5, 0.1)
-        c_cafe  = (0.6, 0.4, 0.0); c_biblio = (0.3, 0.2, 0.6)
-        c_banos = (0.4, 0.4, 0.4); c_esca   = (0.5, 0.2, 0.1)
-        c_entra = (0.1, 0.4, 0.3)
+        
+        # Paleta lúgubre
+        c_aula   = (0.05, 0.1, 0.15)
+        c_patio  = (0.1, 0.15, 0.1)
+        c_cafe   = (0.15, 0.1, 0.05)
+        c_biblio = (0.05, 0.05, 0.1)
+        c_banos  = (0.1, 0.1, 0.1)
+        c_esca   = (0.15, 0.05, 0.05)
+        c_entra  = (0.05, 0.1, 0.1)
+
         self._draw_zone(-40, y, -30, 16, h, 15, c_aula)
         self._draw_zone(-40, y, -15, 16, h, 15, c_aula)
         self._draw_zone(-40, y,   0, 16, h, 15, c_aula)
@@ -225,11 +313,22 @@ class School:
         self._draw_zone( 24, y,  15,  8, h, 15, c_banos)
         self._draw_zone( 32, y,  15,  8, h, 15, c_esca)
 
+        # Muros físicos para crear un laberinto en la escuela
+        self._draw_interior_wall(-24, -30, 1, 60) # Muro largo a la izquierda
+        self._draw_interior_wall(12, -30, 1, 45)  # Muro largo a la derecha
+        self._draw_interior_wall(-24, 0, 15, 1)   # Separador central 1
+        self._draw_interior_wall(0, 0, 12, 1)     # Separador central 2
+
     def _construir_primer_piso(self):
         y = 8.0; h = self.wall_height
-        c_lab  = (0.1, 0.4, 0.3); c_cien = (0.3, 0.5, 0.1)
-        c_sala = (0.3, 0.2, 0.6); c_aula = (0.1, 0.3, 0.6)
-        c_audi = (0.6, 0.3, 0.2); c_dir  = (0.6, 0.4, 0.0); c_enf = (0.6, 0.2, 0.4)
+        c_lab  = (0.05, 0.15, 0.1)
+        c_cien = (0.1, 0.15, 0.05)
+        c_sala = (0.1, 0.05, 0.15)
+        c_aula = (0.05, 0.1, 0.15)
+        c_audi = (0.15, 0.05, 0.05)
+        c_dir  = (0.15, 0.1, 0.0)
+        c_enf  = (0.15, 0.05, 0.1)
+
         self._draw_zone(-40, y, -30, 28, h, 20, c_lab)
         self._draw_zone(-12, y, -30, 24, h, 20, c_cien)
         self._draw_zone( 12, y, -30, 28, h, 20, c_sala)

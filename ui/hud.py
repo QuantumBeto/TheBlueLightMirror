@@ -1,13 +1,12 @@
 """
-ui/hud.py — HUD del Nivel 1: The Blue Light Mirror
-Muestra: barra de concentracion, objetivo, indicador de peligro,
-overlay de dano y pantalla de victoria/derrota.
+ui/hud.py — HUD del Nivel: The Blue Light Mirror
+Muestra: barra de concentracion animada, indicador de peligro,
+overlay de dano y pantalla de victoria.
 """
 import pygame
 import math
 
 WIDTH, HEIGHT = 1280, 720
-
 
 class HUD:
     def __init__(self):
@@ -30,15 +29,19 @@ class HUD:
 
     def draw(self, surface, concentracion, meta_alcanzada=False, derrota=False):
         """Dibuja todo el HUD sobre la surface 2D."""
-        self._draw_barra_concentracion(surface, concentracion)
-        self._draw_objetivo(surface, meta_alcanzada)
-        if concentracion < 40:
+        
+        # 1. Dibujamos la barra siempre (a menos que perdamos/ganemos)
+        if not derrota and not meta_alcanzada:
+            self._draw_barra_concentracion(surface, concentracion)
+        
+        # 2. Efectos visuales de daño
+        if concentracion < 40 and not derrota and not meta_alcanzada:
             self._draw_peligro_overlay(surface, concentracion)
         self._draw_flash_danio(surface)
+        
+        # 3. Pantalla de victoria (La derrota ahora se dibuja con botones en game_runner.py)
         if meta_alcanzada:
             self._draw_victoria(surface)
-        elif derrota:
-            self._draw_derrota(surface)
 
     # ------------------------------------------------------------------
     # BARRA DE CONCENTRACION
@@ -78,26 +81,6 @@ class HUD:
             surface.blit(warn, (BAR_X, BAR_Y + BAR_H + 22))
 
     # ------------------------------------------------------------------
-    # OBJETIVO
-    # ------------------------------------------------------------------
-    def _draw_objetivo(self, surface, meta_alcanzada):
-        OBJ_X, OBJ_Y = 20, HEIGHT - 80
-
-        # Caja de objetivo
-        pygame.draw.rect(surface, (0, 10, 30, 180), (OBJ_X - 4, OBJ_Y - 4, 340, 60), border_radius=6)
-        pygame.draw.rect(surface, (0, 80, 160), (OBJ_X - 4, OBJ_Y - 4, 340, 60), 1, border_radius=6)
-
-        if meta_alcanzada:
-            t1 = self.font_obj.render("[OBJETIVO]  COMPLETADO", True, (0, 255, 120))
-            t2 = self.font_obj.render("Llegaste al aula sin perder todo el enfoque.", True, (180, 255, 200))
-        else:
-            t1 = self.font_obj.render("[OBJETIVO]  Llega al aula", True, (128, 196, 255))
-            t2 = self.font_obj.render("Evita las distracciones digitales en tu camino.", True, (160, 200, 220))
-
-        surface.blit(t1, (OBJ_X + 4, OBJ_Y + 4))
-        surface.blit(t2, (OBJ_X + 4, OBJ_Y + 24))
-
-    # ------------------------------------------------------------------
     # OVERLAY DE PELIGRO (bordes rojos)
     # ------------------------------------------------------------------
     def _draw_peligro_overlay(self, surface, c_val):
@@ -134,28 +117,9 @@ class HUD:
         pulse = abs(math.sin(self._pulso * 1.5))
         color = (int(100 + 155 * pulse), 255, int(150 + 100 * pulse))
 
-        t1 = self.font_title.render("OBJETIVO CUMPLIDO", True, color)
-        t2 = self.font_mono.render("Llegaste al aula con tu concentracion intacta.", True, (200, 255, 220))
-        t3 = self.font_small.render("Presiona ESC para volver al menu.", True, (120, 180, 140))
-
-        surface.blit(t1, (WIDTH // 2 - t1.get_width() // 2, HEIGHT // 2 - 100))
-        surface.blit(t2, (WIDTH // 2 - t2.get_width() // 2, HEIGHT // 2))
-        surface.blit(t3, (WIDTH // 2 - t3.get_width() // 2, HEIGHT // 2 + 50))
-
-    # ------------------------------------------------------------------
-    # PANTALLA DE DERROTA
-    # ------------------------------------------------------------------
-    def _draw_derrota(self, surface):
-        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((30, 0, 0, 180))
-        surface.blit(overlay, (0, 0))
-
-        pulse = abs(math.sin(self._pulso * 2))
-        color = (255, int(50 * pulse), int(50 * pulse))
-
-        t1 = self.font_title.render("CONCENTRACION PERDIDA", True, color)
-        t2 = self.font_mono.render("Las distracciones digitales ganaron esta vez.", True, (255, 180, 180))
-        t3 = self.font_small.render("Presiona ESC para reintentar.", True, (180, 100, 100))
+        t1 = self.font_title.render("NIVEL SUPERADO", True, color)
+        t2 = self.font_mono.render("Has logrado evadir la luz azul y mantener el enfoque.", True, (200, 255, 220))
+        t3 = self.font_small.render("Presiona ESC para seleccionar otro nivel.", True, (120, 180, 140))
 
         surface.blit(t1, (WIDTH // 2 - t1.get_width() // 2, HEIGHT // 2 - 100))
         surface.blit(t2, (WIDTH // 2 - t2.get_width() // 2, HEIGHT // 2))

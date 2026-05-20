@@ -16,6 +16,7 @@ class MenuSystem:
         
         self.state = "MAIN"
         self.selected_char_idx = None
+        self.selected_stage_id = "school" # Nivel por defecto
         self.launch_progress = 0
         
         # Diccionario para la rotación manual con flechas
@@ -63,15 +64,32 @@ class MenuSystem:
                         self.char_angles[char_id] = (self.char_angles[char_id] + 45) % 360
 
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                # --- MENÚ PRINCIPAL ---
                 if self.state == "MAIN":
                     if self.btn_start.collidepoint(mx, my):
-                        self.state = "CHAR_SELECT"
-                        self._init_3d_previews()
+                        self.state = "LEVEL_SELECT" # Ahora pasa primero a elegir nivel
                     elif self.btn_config.collidepoint(mx, my):
                         self.state = "SETTINGS"
                     elif self.btn_credits.collidepoint(mx, my):
                         self.state = "CREDITS"
+
+                # --- SELECCIÓN DE NIVEL ---
+                # --- SELECCIÓN DE NIVEL ---
+                elif self.state == "LEVEL_SELECT":
+                    # Usamos hasattr por si aún no se dibuja la primera vez
+                    if hasattr(self, 'level_cards'):
+                        for rect, stage_id in self.level_cards:
+                            if rect.collidepoint(mx, my):
+                                self.selected_stage_id = stage_id
+                                self.state = "CHAR_SELECT"
+                                if self.sfx_select: self.sfx_select.play()
+                                self._init_3d_previews()
+                                break # Romper el ciclo al encontrar el clic
+
+                    if hasattr(self, 'btn_back_lvl') and self.btn_back_lvl.collidepoint(mx, my):
+                        self.state = "MAIN"
                         
+                # --- SELECCIÓN DE PERSONAJE ---
                 elif self.state == "CHAR_SELECT":
                     for i, rect in enumerate(self.char_rects):
                         if rect.collidepoint(mx, my):
@@ -83,10 +101,11 @@ class MenuSystem:
                         self.state = "LAUNCH"
                         self.launch_progress = 0
                     if self.btn_back.collidepoint(mx, my):
-                        self.state = "MAIN"
+                        self.state = "LEVEL_SELECT" # Vuelve a la selección de nivel
                         self.selected_char_idx = None
                         self._cleanup_3d()
 
+                # --- AJUSTES ---
                 elif self.state == "SETTINGS":
                     if self.btn_back.collidepoint(mx, my):
                         self.state = "MAIN"
@@ -103,6 +122,7 @@ class MenuSystem:
                     elif self.btn_res.collidepoint(mx, my):
                         self.settings["resolution"] = "1920x1080" if self.settings["resolution"] == "1280x720" else "1280x720"
 
+                # --- CRÉDITOS ---
                 elif self.state == "CREDITS":
                     if self.btn_back.collidepoint(mx, my):
                         self.state = "MAIN"
@@ -111,7 +131,9 @@ class MenuSystem:
         if self.state == "LAUNCH":
             self.launch_progress += 0.5
             if self.launch_progress >= 100:
-                return CHARACTERS[self.selected_char_idx]["id"]
+                # Ahora devuelve una tupla con (personaje, nivel)
+                char_id = CHARACTERS[self.selected_char_idx]["id"]
+                return char_id, self.selected_stage_id
         return None
 
     def draw(self):
@@ -119,6 +141,7 @@ class MenuSystem:
         mx, my = pygame.mouse.get_pos()
         
         if self.state == "MAIN": self._draw_main(mx, my)
+        elif self.state == "LEVEL_SELECT": self._draw_level_select(mx, my)
         elif self.state == "CHAR_SELECT": self._draw_char_select(mx, my)
         elif self.state == "SETTINGS": self._draw_settings(mx, my)
         elif self.state == "CREDITS": self._draw_credits(mx, my)
@@ -138,6 +161,69 @@ class MenuSystem:
         self.btn_start = self._draw_button(" INICIAR SIMULACIÓN", WIDTH//2, 350, mx, my, is_primary=True)
         self.btn_config = self._draw_button(" CONFIGURACIÓN", WIDTH//2, 420, mx, my)
         self.btn_credits = self._draw_button(" CRÉDITOS", WIDTH//2, 490, mx, my)
+
+    def _draw_level_select(self, mx, my):
+        title_font = pygame.font.SysFont("monospace", 42, bold=True)
+        name_font  = pygame.font.SysFont("monospace", 22, bold=True)
+        desc_font  = pygame.font.SysFont("monospace", 14)
+
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 5, 15, 240))
+        self.screen.blit(overlay, (0, 0))
+
+        title = title_font.render("SELECCIONA TU ENTORNO", True, (128, 196, 255))
+        self.screen.blit(title, (WIDTH//2 - title.get_width()//2, 50))
+
+        niveles = [
+            {
+                "id": "school", 
+                "nombre": "NIVEL 1: LA ESCUELA", 
+                "desc": "El epicentro del estrés y la fricción cognitiva.",
+                "color_base": (0, 30, 60), "color_hover": (0, 80, 150), "borde": (100, 180, 255)
+            },
+            {
+                "id": "stage_house", 
+                "nombre": "NIVEL 2: LA CASA", 
+                "desc": "Un refugio oscuro, invadido por pantallas encendidas.",
+                "color_base": (40, 20, 10), "color_hover": (100, 50, 20), "borde": (255, 160, 80)
+            },
+            {
+                "id": "stage_park", 
+                "nombre": "NIVEL 3: EL PARQUE", 
+                "desc": "Naturaleza muerta ahogada por las señales digitales.",
+                "color_base": (10, 40, 20), "color_hover": (20, 90, 40), "borde": (80, 220, 100)
+            }
+        ]
+
+        card_w, card_h = 500, 100
+        start_y = 150
+        gap = 25
+
+        self.level_cards = [] # Guardamos aquí las zonas clickeables
+
+        for i, lvl in enumerate(niveles):
+            rect = pygame.Rect(WIDTH//2 - card_w//2, start_y + (card_h + gap) * i, card_w, card_h)
+            is_hover = rect.collidepoint(mx, my)
+
+            if is_hover:
+                rect.y -= 4; rect.height += 8; rect.width += 8; rect.x -= 4
+
+            bg_color = lvl["color_hover"] if is_hover else lvl["color_base"]
+            pygame.draw.rect(self.screen, bg_color, rect, border_radius=10)
+            
+            border_thickness = 3 if is_hover else 1
+            border_color = lvl["borde"] if is_hover else (50, 50, 60)
+            pygame.draw.rect(self.screen, border_color, rect, border_thickness, border_radius=10)
+
+            txt_name = name_font.render(lvl["nombre"], True, (255, 255, 255))
+            txt_desc = desc_font.render(lvl["desc"], True, (180, 190, 200))
+            
+            self.screen.blit(txt_name, (rect.x + 20, rect.y + 20))
+            self.screen.blit(txt_desc, (rect.x + 20, rect.y + 60))
+
+            self.level_cards.append((rect, lvl["id"]))
+
+        self.btn_back_lvl = self._draw_button("← VOLVER AL NEXO", WIDTH//2, HEIGHT - 80, mx, my)
 
     def _draw_char_select(self, mx, my):
         title = self.font_title.render("SELECCIÓN DE AGENTE", True, COLORS["cyan_light"])
@@ -239,10 +325,21 @@ class MenuSystem:
 
     def _draw_launch(self):
         char_name = CHARACTERS[self.selected_char_idx]["name"]
+        
+        # Mapeo para mostrar un nombre bonito del nivel
+        nombres_niveles = {
+            "school": "Nivel 1 — La Escuela",
+            "stage_house": "Nivel 2 — La Casa",
+            "stage_park": "Nivel 3 — El Parque"
+        }
+        nivel_name = nombres_niveles.get(self.selected_stage_id, "Desconocido")
+
         t1 = self.font_title.render("INICIANDO SIMULACIÓN", True, COLORS["cyan_light"])
-        t2 = self.font_btn.render(f"AGENTE: {char_name}", True, COLORS["text_main"])
+        t2 = self.font_btn.render(f"AGENTE: {char_name}  |  UBICACIÓN: {nivel_name}", True, COLORS["text_main"])
+        
         self.screen.blit(t1, (WIDTH//2 - t1.get_width()//2, HEIGHT//2 - 100))
         self.screen.blit(t2, (WIDTH//2 - t2.get_width()//2, HEIGHT//2 - 20))
+        
         bar_w = 400
         pygame.draw.rect(self.screen, COLORS["dark_border"], (WIDTH//2 - bar_w//2, HEIGHT//2 + 50, bar_w, 10))
         pygame.draw.rect(self.screen, COLORS["cyan_light"],  (WIDTH//2 - bar_w//2, HEIGHT//2 + 50, int(bar_w * (self.launch_progress/100)), 10))

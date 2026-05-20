@@ -2,7 +2,6 @@ import math
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from core.collision import CollisionSystem
-from world.environment.lighting import SchoolLighting
 from world.environment.park_lighting import ParkLighting
 from world.objects.npcs import NPC
 from world.objects.items import Items
@@ -27,25 +26,23 @@ class StagePark:
         self.furniture = Furniture()
         self.items     = Items()
 
-        # NPCs en el parque (personas descansando, paseando)
         self.npcs = [
-            NPC(  8, 0, 10, (0.9, 0.7, 0.2), 0.3),
-            NPC( -4, 0,  4, (0.3, 0.8, 0.4), 0.5),
-            NPC( 14, 0, -6, (0.5, 0.3, 0.8), 1.0),
+            NPC(  8, 0, 10, (0.4, 0.4, 0.5), 0.05),
+            NPC( -4, 0,  4, (0.3, 0.3, 0.3), 0.08),
+            NPC( 14, 0, -6, (0.2, 0.2, 0.4), 0.1),
         ]
 
-        # 6 distracciones — más dispersas en el exterior
+        # OBJETOS REALES DE LAS MISIONES DEL PARQUE
         self.distracciones = [
-            DigitalDistraction( 10.0,  20.0, 0.9, "red_social"),
-            DigitalDistraction( -8.0,  12.0, 1.0, "celular"),
-            DigitalDistraction( 16.0,   4.0, 0.8, "campana"),
-            DigitalDistraction( -6.0,  -6.0, 0.9, "notif"),
-            DigitalDistraction(  6.0, -14.0, 1.0, "celular"),
-            DigitalDistraction(-18.0, -18.0, 0.8, "campana"),
+            DigitalDistraction( 10.0,  20.0, 0.9, "kiosk"),      # Kiosco interactivo
+            DigitalDistraction( -8.0,  12.0, 1.0, "billboard"),  # Gran Valla publicitaria LED
+            DigitalDistraction( -20.0, -2.0, 0.8, "fountain"),   # La Fuente central 3D
+            DigitalDistraction( -6.0,  -6.0, 0.9, "npc_phone"),  # El NPC absorto en su pantalla
+            DigitalDistraction(  6.0, -14.0, 1.0, "signal"),     # La Torre WiFi de señal
+            DigitalDistraction(-18.0, -18.0, 0.8, "rest"),       # Banca del parque para descansar
         ]
 
         self.objetos_colisionables = self.npcs + self.distracciones
-
         self.meta_alcanzada = False
         self._meta_pulse    = 0.0
 
@@ -90,20 +87,99 @@ class StagePark:
         self._construir_zona_norte()
         self.furniture.draw()
         self.items.draw()
-        for obj in self.objetos_colisionables:
-            obj.draw()
+        
+        # Dibujar los elementos interactivos del parque
+        for obj in self.distracciones:
+            self._draw_custom_object(obj)
+            
+        for npc in self.npcs:
+            npc.draw()
+            
         self._draw_meta()
 
-    # -------------------------------------------------------
-    # META — color naranja cálido (atardecer en el parque)
-    # -------------------------------------------------------
+    def _draw_custom_object(self, obj):
+        glPushMatrix()
+        glTranslatef(obj.x, 0, obj.z)
+        q = gluNewQuadric()
+
+        # Dibujar área roja en el suelo
+        glDisable(GL_LIGHTING)
+        glColor3f(0.8, 0.1, 0.1)
+        glBegin(GL_LINE_LOOP)
+        for i in range(16):
+            a = 2 * math.pi * i / 16
+            glVertex3f(4.0 * math.cos(a), 0.02, 4.0 * math.sin(a))
+        glEnd()
+        glEnable(GL_LIGHTING)
+
+        # Gráficos dedicados para cada misión del parque
+        if obj.tipo == "fountain":
+            # Fuente Circular 3D Real
+            glRotatef(-90, 1, 0, 0)
+            glColor3f(0.2, 0.2, 0.2) # Piedra exterior
+            gluCylinder(q, 3.5, 3.5, 0.8, 16, 1)
+            gluDisk(q, 0, 3.5, 16, 1)
+            glTranslatef(0, 0, 0.6)
+            glColor3f(0.05, 0.15, 0.25) # Agua estancada
+            gluDisk(q, 0, 3.3, 16, 1)
+            
+        elif obj.tipo == "signal":
+            # Torre WiFi: Poste alto metálico con cajas emisoras de señal
+            glColor3f(0.3, 0.3, 0.3)
+            glPushMatrix(); glTranslatef(0, 3.0, 0); glScalef(0.3, 6.0, 0.3); self._cube_mesh(); glPopMatrix()
+            glColor3f(0.8, 0.0, 0.0) # Luz roja parpadeante de antena
+            glPushMatrix(); glTranslatef(0, 6.1, 0); gluSphere(q, 0.2, 8, 8); glPopMatrix()
+
+        elif obj.tipo == "billboard":
+            # Espectacular publicitario LED gigante
+            glColor3f(0.1, 0.1, 0.1) # Postes de soporte
+            glPushMatrix(); glTranslatef(-1.5, 2.0, 0); glScalef(0.15, 4.0, 0.15); self._cube_mesh(); glPopMatrix()
+            glPushMatrix(); glTranslatef(1.5, 2.0, 0); glScalef(0.15, 4.0, 0.15); self._cube_mesh(); glPopMatrix()
+            # Pantalla superior
+            glColor3f(0.05, 0.05, 0.05)
+            glPushMatrix(); glTranslatef(0, 4.5, 0); glScalef(4.5, 2.2, 0.4); self._cube_mesh(); glPopMatrix()
+            glColor3f(0.0, 0.8, 0.9) # Luz azul LED cegadora
+            glPushMatrix(); glTranslatef(0, 4.5, 0.21); glScalef(4.2, 1.9, 0.02); self._cube_mesh(); glPopMatrix()
+
+        elif obj.tipo == "kiosk":
+            # Kiosco Digital de anuncios de metal
+            glColor3f(0.15, 0.15, 0.15)
+            glPushMatrix(); glTranslatef(0, 1.3, 0); glScalef(1.2, 2.6, 0.4); self._cube_mesh(); glPopMatrix()
+            glColor3f(0.0, 0.5, 1.0) # Pantalla interactiva
+            glPushMatrix(); glTranslatef(0, 1.5, 0.21); glScalef(0.9, 1.6, 0.02); self._cube_mesh(); glPopMatrix()
+
+        elif obj.tipo == "rest":
+            # Banca de madera oscura del parque
+            glColor3f(0.2, 0.12, 0.05)
+            glPushMatrix(); glTranslatef(0, 0.4, 0); glScalef(2.5, 0.15, 0.8); self._cube_mesh(); glPopMatrix()
+            glPushMatrix(); glTranslatef(0, 0.8, -0.4); glScalef(2.5, 0.8, 0.15); self._cube_mesh(); glPopMatrix()
+
+        else:
+            # Caso "npc_phone" u otros: prisma indicador cian
+            glColor3f(0.0, 0.8, 0.7)
+            glPushMatrix(); glTranslatef(0, 1.0, 0); glScalef(0.3, 1.5, 0.3); self._cube_mesh(); glPopMatrix()
+
+        glPopMatrix()
+
+    def _cube_mesh(self):
+        glBegin(GL_QUADS)
+        faces = [
+            (0,0,1, (-0.5,-0.5,0.5),(0.5,-0.5,0.5),(0.5,0.5,0.5),(-0.5,0.5,0.5)),
+            (0,0,-1, (-0.5,-0.5,-0.5),(-0.5,0.5,-0.5),(0.5,0.5,-0.5),(0.5,-0.5,-0.5)),
+            (0,1,0, (-0.5,0.5,-0.5),(0.5,0.5,-0.5),(0.5,0.5,0.5),(-0.5,0.5,0.5)),
+            (0,-1,0, (-0.5,-0.5,-0.5),(0.5,-0.5,-0.5),(0.5,-0.5,0.5),(-0.5,-0.5,0.5)),
+            (1,0,0, (0.5,-0.5,-0.5),(0.5,0.5,-0.5),(0.5,0.5,0.5),(0.5,-0.5,0.5)),
+            (-1,0,0, (-0.5,-0.5,-0.5),(-0.5,-0.5,0.5),(-0.5,0.5,0.5),(-0.5,0.5,-0.5)),
+        ]
+        for nx,ny,nz,v0,v1,v2,v3 in faces:
+            glNormal3f(nx,ny,nz)
+            for v in (v0,v1,v2,v3): glVertex3f(*v)
+        glEnd()
+
     def _draw_meta(self):
         glDisable(GL_LIGHTING)
         pulse = (math.sin(self._meta_pulse) + 1.0) * 0.5
-        if not self.meta_alcanzada:
-            glColor3f(0.9 + pulse * 0.1, 0.5 + pulse * 0.2, 0.1)
-        else:
-            glColor3f(1.0, 0.6, 0.1)
+        glColor3f(0.9 + pulse * 0.1, 0.5 + pulse * 0.2, 0.1)
 
         q = gluNewQuadric()
         glPushMatrix()
@@ -120,22 +196,11 @@ class StagePark:
             glVertex3f(META_X + META_RADIO * math.cos(a), 0.08, META_Z + META_RADIO * math.sin(a))
         glEnd()
         glLineWidth(1.0)
-
-        alt = 3.0 + pulse * 0.5
-        glColor3f(1.0, 0.7, 0.2)
-        glBegin(GL_TRIANGLES)
-        glVertex3f(META_X - 0.6, alt,       META_Z)
-        glVertex3f(META_X + 0.6, alt,       META_Z)
-        glVertex3f(META_X,       alt + 1.2, META_Z)
-        glEnd()
         glEnable(GL_LIGHTING)
 
-    # -------------------------------------------------------
-    # SUELO — césped verde exterior
-    # -------------------------------------------------------
     def _draw_floor_base(self):
         glDisable(GL_LIGHTING)
-        glColor3f(0.25, 0.55, 0.20)   # césped verde
+        glColor3f(0.1, 0.15, 0.1)
         glBegin(GL_QUADS)
         glVertex3f(-self.limit_x, 0, -self.limit_z)
         glVertex3f( self.limit_x, 0, -self.limit_z)
@@ -144,101 +209,50 @@ class StagePark:
         glEnd()
         glEnable(GL_LIGHTING)
 
-    # -------------------------------------------------------
-    # PAREDES — vallas/bardas bajas de parque (tono madera)
-    # -------------------------------------------------------
     def _draw_walls(self):
         lx = self.limit_x
         lz = self.limit_z
         h  = self.wall_height * 2
-
         glDisable(GL_LIGHTING)
-        glColor3f(0.55, 0.38, 0.18)   # madera de barda
-
+        glColor3f(0.15, 0.15, 0.15)
         glBegin(GL_QUADS)
-        glNormal3f(0, 0, 1)
-        glVertex3f(-lx, 0,  -lz); glVertex3f( lx, 0,  -lz)
-        glVertex3f( lx,  h, -lz); glVertex3f(-lx,  h, -lz)
-
-        glNormal3f(0, 0, -1)
-        glVertex3f( lx, 0,  lz); glVertex3f(-lx, 0,  lz)
-        glVertex3f(-lx,  h, lz); glVertex3f( lx,  h, lz)
-
-        glNormal3f(1, 0, 0)
-        glVertex3f(-lx, 0,  lz); glVertex3f(-lx, 0, -lz)
-        glVertex3f(-lx,  h, -lz); glVertex3f(-lx,  h, lz)
-
-        glNormal3f(-1, 0, 0)
-        glVertex3f( lx, 0, -lz); glVertex3f( lx, 0,  lz)
-        glVertex3f( lx,  h, lz); glVertex3f( lx,  h, -lz)
+        glVertex3f(-lx, 0, -lz); glVertex3f( lx, 0, -lz); glVertex3f( lx, h, -lz); glVertex3f(-lx, h, -lz)
+        glVertex3f( lx, 0,  lz); glVertex3f(-lx, 0,  lz); glVertex3f(-lx, h, lz); glVertex3f( lx, h, lz)
+        glVertex3f(-lx, 0,  lz); glVertex3f(-lx, 0, -lz); glVertex3f(-lx, h, -lz); glVertex3f(-lx, h, lz)
+        glVertex3f( lx, 0, -lz); glVertex3f( lx, 0,  lz); glVertex3f( lx, h, lz); glVertex3f( lx, h, -lz)
         glEnd()
-
         glEnable(GL_LIGHTING)
 
-    # -------------------------------------------------------
-    # HELPER ZONAS
-    # -------------------------------------------------------
+    def _construir_zona_exterior(self):
+        y = 0.0; h = self.wall_height
+        c_sendero  = (0.20, 0.18, 0.15)
+        c_flores   = (0.25, 0.10, 0.15)
+        c_bancas   = (0.15, 0.10, 0.05)
+        c_cancha   = (0.20, 0.18, 0.10)
+        c_entrada  = (0.10, 0.10, 0.10)
+
+        self._draw_zone( -8, y, 18, 16, h, 12, c_entrada)
+        self._draw_zone( -4, y, -8, 8,  h, 26, c_sendero)
+        self._draw_zone(-30, y,  6, 18, h, 12, c_flores)
+        self._draw_zone( 16, y,  -6, 20, h, 14, c_bancas)
+        self._draw_zone( 16, y,  8, 20, h, 14, c_cancha)
+
+    def _construir_zona_norte(self):
+        y = 0.0; h = self.wall_height
+        c_descanso  = (0.10, 0.20, 0.10)
+        c_sin_senal = (0.05, 0.05, 0.05)
+        c_mirador   = (0.15, 0.10, 0.05)
+        c_arboleda  = (0.05, 0.15, 0.05)
+
+        self._draw_zone(-12, y, -30, 24, h, 20, c_descanso)
+        self._draw_zone(-40, y, -30, 16, h, 20, c_sin_senal)
+        self._draw_zone( 24, y, -30, 16, h, 20, c_mirador)
+        self._draw_zone(-40, y, -10, 16, h, 18, c_arboleda)
+
     def _draw_zone(self, x, y, z, w, h, d, color):
         glDisable(GL_LIGHTING)
         glColor3f(*color)
         glBegin(GL_QUADS)
-        glVertex3f(x,   y+0.01, z);   glVertex3f(x+w, y+0.01, z)
-        glVertex3f(x+w, y+0.01, z+d); glVertex3f(x,   y+0.01, z+d)
-        glEnd()
-        glColor3f(color[0]*0.5, color[1]*0.5, color[2]*0.5)
-        glLineWidth(1.5)
-        glBegin(GL_LINE_LOOP)
-        glVertex3f(x,   y+h, z);   glVertex3f(x+w, y+h, z)
-        glVertex3f(x+w, y+h, z+d); glVertex3f(x,   y+h, z+d)
-        glEnd()
-        glBegin(GL_LINES)
-        glVertex3f(x,   y, z);   glVertex3f(x,   y+h, z)
-        glVertex3f(x+w, y, z);   glVertex3f(x+w, y+h, z)
-        glVertex3f(x+w, y, z+d); glVertex3f(x+w, y+h, z+d)
-        glVertex3f(x,   y, z+d); glVertex3f(x,   y+h, z+d)
+        glVertex3f(x, y+0.01, z); glVertex3f(x+w, y+0.01, z); glVertex3f(x+w, y+0.01, z+d); glVertex3f(x, y+0.01, z+d)
         glEnd()
         glEnable(GL_LIGHTING)
-
-    # -------------------------------------------------------
-    # ZONA EXTERIOR — senderos, áreas de césped, estanque
-    # -------------------------------------------------------
-    def _construir_zona_exterior(self):
-        y = 0.0; h = self.wall_height
-        c_sendero  = (0.65, 0.58, 0.45)  # sendero — tierra/arena
-        c_estanque = (0.15, 0.40, 0.70)  # estanque — azul agua
-        c_flores   = (0.80, 0.30, 0.50)  # zona de flores — rosa
-        c_bancas   = (0.50, 0.35, 0.15)  # área de bancas — madera
-        c_cancha   = (0.70, 0.65, 0.30)  # cancha/área de juegos — tierra
-        c_entrada  = (0.55, 0.50, 0.40)  # entrada del parque
-
-        # Entrada sur
-        self._draw_zone( -8, y, 18, 16, h, 12, c_entrada)
-        # Sendero central (de sur a norte)
-        self._draw_zone( -4, y, -8, 8,  h, 26, c_sendero)
-        # Estanque (izquierda centro)
-        self._draw_zone(-30, y, -10, 18, h, 16, c_estanque)
-        # Zona de flores (izquierda sur)
-        self._draw_zone(-30, y,   6, 18, h, 12, c_flores)
-        # Área de bancas (derecha centro)
-        self._draw_zone( 16, y,  -6, 20, h, 14, c_bancas)
-        # Cancha / área de juegos (derecha sur)
-        self._draw_zone( 16, y,   8, 20, h, 14, c_cancha)
-
-    # -------------------------------------------------------
-    # ZONA NORTE — área de descanso, zona sin señal, mirador
-    # -------------------------------------------------------
-    def _construir_zona_norte(self):
-        y = 0.0; h = self.wall_height
-        c_descanso  = (0.30, 0.60, 0.25)  # zona verde de descanso
-        c_sin_senal = (0.20, 0.20, 0.20)  # zona sin señal — gris oscuro
-        c_mirador   = (0.45, 0.30, 0.10)  # mirador — madera oscura
-        c_arboleda  = (0.15, 0.45, 0.10)  # arboleda — verde oscuro
-
-        # Zona de descanso (centro-norte)
-        self._draw_zone(-12, y, -30, 24, h, 20, c_descanso)
-        # Zona sin señal (esquina noroeste) — objetivo especial
-        self._draw_zone(-40, y, -30, 16, h, 20, c_sin_senal)
-        # Mirador (esquina noreste)
-        self._draw_zone( 24, y, -30, 16, h, 20, c_mirador)
-        # Arboleda (oeste)
-        self._draw_zone(-40, y, -10, 16, h, 18, c_arboleda)
