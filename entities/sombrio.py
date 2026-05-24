@@ -69,6 +69,21 @@ class Sombrio:
             self.angulo_brazo_der = -180
             self.angulo_brazo_izq = -180
             self.y = 1.5
+        elif self.movimiento == 8:  # celebrar
+            self.angulo_brazo_der = -160 + math.sin(self.tiempo_anim * 8) * 20
+            self.angulo_brazo_izq = -160 + math.cos(self.tiempo_anim * 8) * 20
+            self.angulo_pierna_der =  math.sin(self.tiempo_anim * 8) * 15
+            self.angulo_pierna_izq = -math.sin(self.tiempo_anim * 8) * 15
+        elif self.movimiento == 9:  # temblar
+            self.angulo_brazo_der =  math.sin(self.tiempo_anim * 20) * 30
+            self.angulo_brazo_izq = -math.sin(self.tiempo_anim * 20) * 30
+            self.angulo_pierna_der = math.cos(self.tiempo_anim * 20) * 15
+            self.angulo_pierna_izq = math.sin(self.tiempo_anim * 20) * 15
+        elif self.movimiento == 10:  # bailar
+            self.angulo_brazo_der  =  math.sin(self.tiempo_anim * 4) * 60 - 90
+            self.angulo_brazo_izq  =  math.cos(self.tiempo_anim * 4) * 60 - 90
+            self.angulo_pierna_der =  math.cos(self.tiempo_anim * 4) * 25
+            self.angulo_pierna_izq =  math.sin(self.tiempo_anim * 4) * 25
 
         if self.bailando:
             self.angulo_brazo_der  =  math.sin(self.tiempo_anim * 4) * 60 - 90

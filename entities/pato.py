@@ -39,6 +39,12 @@ class Pato:
         elif self.animacion == "CAMINANDO":
             glTranslatef(0, abs(math.sin(self.frame_counter * 0.3)) * 0.1, 0)
             glRotatef(5, 1, 0, 0)
+        elif self.animacion == "CELEBRANDO":
+            glTranslatef(0, abs(math.sin(self.frame_counter * 0.6)) * 0.4, 0)
+            glRotatef(math.sin(self.frame_counter * 0.3) * 20, 0, 1, 0)
+        elif self.animacion == "TEMBLANDO":
+            glTranslatef(math.sin(self.frame_counter * 0.8) * 0.12, 0, 0)
+            glTranslatef(0, math.cos(self.frame_counter * 0.9) * 0.08, 0)
 
         self._draw_cuerpo()
         self._draw_alas()

@@ -15,6 +15,7 @@ from entities import get_character
 from core.camera import CinematicCamera
 from core.sound_manager import SoundManager
 from ui.hud import HUD
+from core.mission_manager import MissionManager
 import math
 import sys
 
@@ -261,6 +262,12 @@ def _load_stage(stage_id, player):
     player.z = spawn_z
     if hasattr(player, "y"):  player.y = 1.5
     player.concentracion = 100.0
+    # Inyectar coordenadas de meta para brujula HUD
+    from stages.school      import META_X as SCH_X, META_Z as SCH_Z
+    from stages.stage_house import META_X as HSE_X, META_Z as HSE_Z
+    from stages.stage_park  import META_X as PRK_X, META_Z as PRK_Z
+    _META = {"school":(SCH_X,SCH_Z),"stage_house":(HSE_X,HSE_Z),"stage_park":(PRK_X,PRK_Z)}
+    world.meta_x, world.meta_z = _META.get(stage_id, (0.0, 0.0))
     return world
 
 
@@ -286,7 +293,13 @@ def run(character_id, stage_id="school"):
     camera    = CinematicCamera()
     world     = _load_stage(stage_id, player)
     hud       = HUD()
-    sound_mgr = SoundManager()          # ← SoundManager de personaje
+    sound_mgr = SoundManager()
+    mission_mgr = MissionManager(stage_id)
+
+    # Pasar datos al HUD
+    hud.misiones = mission_mgr.get_misiones()
+    hud.meta_x   = world.meta_x if hasattr(world, 'meta_x') else 0.0
+    hud.meta_z   = world.meta_z if hasattr(world, 'meta_z') else 0.0          # ← SoundManager de personaje
 
     is_paused       = False
     show_controls   = False
@@ -338,6 +351,8 @@ def run(character_id, stage_id="school"):
                         pygame.mouse.set_visible(mouse_libre)
                         pygame.event.set_grab(not mouse_libre)
                     elif botones["change_char"].collidepoint(mx, my):
+                        pygame.mouse.set_visible(True)
+                        pygame.event.set_grab(False)
                         return "CHAR_SELECT"
                     elif botones["change_level"].collidepoint(mx, my):
                         show_levels = True
@@ -353,6 +368,8 @@ def run(character_id, stage_id="school"):
                             pygame.mixer.music.set_volume(0.4 if sonido_activo else 0.0)
                         sound_mgr.set_enabled(sonido_activo)
                     elif botones["exit"].collidepoint(mx, my):
+                        pygame.mouse.set_visible(True)
+                        pygame.event.set_grab(False)
                         return "MAIN_MENU"
 
                 if event.button == 1 and show_levels:
@@ -367,6 +384,10 @@ def run(character_id, stage_id="school"):
                                 stage_id = sid
                                 world    = _load_stage(stage_id, player)
                                 hud      = HUD()
+                                mission_mgr = MissionManager(stage_id)
+                                hud.misiones = mission_mgr.get_misiones()
+                                hud.meta_x = world.meta_x if hasattr(world,'meta_x') else 0.0
+                                hud.meta_z = world.meta_z if hasattr(world,'meta_z') else 0.0
                                 level_complete_timer = 0.0
                                 pygame.display.set_caption(
                                     f"The Blue Light Mirror — {STAGE_NOMBRES[stage_id]} — {character_id.upper()}"
@@ -410,6 +431,13 @@ def run(character_id, stage_id="school"):
                         if event.key == k:
                             _set_expresion(player, v)
 
+            # Botones de animación extra del HUD
+            if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                if not is_paused and not show_controls and not show_levels and mouse_libre:
+                    anim = hud.handle_click(mx, my)
+                    if anim:
+                        _set_animacion_extra(player, anim)
+
             if event.type == MOUSEMOTION and not is_paused and not show_controls and not show_levels:
                 botones_mouse = pygame.mouse.get_pressed()
                 if not mouse_libre or botones_mouse[2]:
@@ -426,12 +454,18 @@ def run(character_id, stage_id="school"):
                     stage_id = STAGE_ORDER[idx + 1]
                     world    = _load_stage(stage_id, player)
                     hud      = HUD()
+                    mission_mgr = MissionManager(stage_id)
+                    hud.misiones = mission_mgr.get_misiones()
+                    hud.meta_x = world.meta_x if hasattr(world,'meta_x') else 0.0
+                    hud.meta_z = world.meta_z if hasattr(world,'meta_z') else 0.0
                     level_complete_timer = 0.0
                     pygame.display.set_caption(
                         f"The Blue Light Mirror — {STAGE_NOMBRES[stage_id]} — {character_id.upper()}"
                     )
                 else:
                     # Último nivel completado → volver al menú
+                    pygame.mouse.set_visible(True)
+                    pygame.event.set_grab(False)
                     return "MAIN_MENU"
 
         # ── LÓGICA ──────────────────────────────────────────────────────────
@@ -486,7 +520,20 @@ def run(character_id, stage_id="school"):
                     if hasattr(player, "vel_y"): player.vel_y = 0
 
             world.update(dt, player=player)
+            mission_mgr.update(dt, player.concentracion, world.meta_alcanzada)
+            hud.tiempo_nivel = mission_mgr.tiempo_nivel
+            hud.misiones = mission_mgr.get_misiones()
+            # Notificaciones de misiones completadas
+            while mission_mgr.hay_notif():
+                notif = mission_mgr.pop_notif()
+                if notif:
+                    hud.push_notif(f"¡{notif}!")
+            prev_conc = player.concentracion
             world.check_collision(player)
+            # Detectar nuevo contacto con distracción
+            if player.concentracion < prev_conc:
+                mission_mgr.contactos += 1
+                hud.contactos = mission_mgr.contactos
             hud.update(dt, player.concentracion)
 
             # ── Actualizar sonidos del personaje ─────────────────────────────
@@ -523,7 +570,8 @@ def run(character_id, stage_id="school"):
 
         hud.draw(hud_surf, player.concentracion,
                  meta_alcanzada=world.meta_alcanzada,
-                 derrota=derrota)
+                 derrota=derrota,
+                 player=player)
 
         # Pantalla de nivel completado (nuevo)
         if world.meta_alcanzada and level_complete_timer > 0:
@@ -559,8 +607,54 @@ def _set_expresion(player, valor):
         m = {1:"normal",2:"anger",3:"sad",4:"fear",5:"surprise"}
         player.expression = m.get(valor, "normal")
 
+def _set_animacion_extra(player, nombre):
+    """Activa una animación especial en el personaje según su tipo."""
+    # Sombrio / AmongUs: usan movimiento numérico
+    mapa_numerico = {"celebrar": 8, "temblar": 9, "bailar": 10}
+    if hasattr(player, "movimiento") or hasattr(player, "movimiento_actual"):
+        v = mapa_numerico.get(nombre, 1)
+        if hasattr(player, "movimiento"):        player.movimiento = v
+        if hasattr(player, "movimiento_actual"): player.movimiento_actual = v
+
+    # Baymax / Nexo / Pato: estados de string
+    if hasattr(player, "movement"):   # Baymax
+        player.movement = nombre
+    if hasattr(player, "move_state"):  # Nexo
+        player.move_state = nombre
+    if hasattr(player, "animacion"):   # Pato
+        player.animacion = nombre.upper() + "NDO" if nombre == "celebra" else (
+            "CELEBRANDO" if nombre == "celebrar" else (
+            "TEMBLANDO"  if nombre == "temblar"  else
+            "BAILANDO"   if nombre == "bailar"   else "IDLE"
+        ))
+    if hasattr(player, "_anim_state"):  # Freddy
+        player._anim_state = nombre
+        player._walk_anim  = False
+
+
 def _set_movimiento(player, valor):
+    # Sombrio / AmongUs: atributos numéricos
     if hasattr(player, "movimiento"):        player.movimiento = valor
     if hasattr(player, "movimiento_actual"): player.movimiento_actual = valor
+
+    # Nexo: move_state en español
     if hasattr(player, "move_state"):
-        player.move_state = "caminar" if valor==2 else ("agachado" if valor==6 else "idle")
+        player.move_state = "caminar" if valor == 2 else ("agachado" if valor == 6 else "idle")
+
+    # Baymax: movement en inglés
+    if hasattr(player, "movement"):
+        if valor == 2:   player.movement = "walk"
+        elif valor == 6: player.movement = "crouch"
+        elif valor == 3: player.movement = "jump"
+        else:            player.movement = "idle"
+
+    # Pato: animacion en mayúsculas
+    if hasattr(player, "animacion"):
+        if valor == 2:   player.animacion = "CAMINANDO"
+        elif valor == 6: player.animacion = "AGACHADO"
+        elif valor == 3: player.animacion = "BAILANDO"
+        else:            player.animacion = "IDLE"
+
+    # Freddy: no tiene sistema de animación propio; le añadimos walk_t
+    if hasattr(player, "_walk_anim"):
+        player._walk_anim = (valor == 2)

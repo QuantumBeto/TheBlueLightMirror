@@ -29,6 +29,15 @@ class Baymax:
 
     def update(self, dt, cognitive_friction=1.0):
         self.tiempo_anim += int(dt * 1000)
+        # Gravedad para salto
+        if self.en_aire:
+            self.vel_y -= 9.8 * dt
+            self.y += self.vel_y * dt
+            if self.y <= 0.0:
+                self.y = 0.0
+                self.en_aire = False
+                self.vel_y = 0.0
+                self.movement = "idle"
         if self.movement == "jump":
             t = (self.tiempo_anim - self.jump_start) / 800.0
             if t >= 1.0:
@@ -101,6 +110,16 @@ class Baymax:
         elif self.movement == "crouch":
             y_off       = -1.0
             leg_scale_y = 0.3
+        elif self.movement == "celebrar":
+            arm_rot = -140.0 + math.sin(self.tiempo_anim * 0.01) * 20
+            y_off   = abs(math.sin(self.tiempo_anim * 0.015)) * 0.8
+        elif self.movement == "temblar":
+            y_off   = math.sin(self.tiempo_anim * 0.05) * 0.15
+            arm_rot = math.sin(self.tiempo_anim * 0.04) * 40
+        elif self.movement == "bailar":
+            arm_rot = math.sin(self.tiempo_anim * 0.008) * 80
+            leg_rot = math.cos(self.tiempo_anim * 0.008) * 30
+            y_off   = abs(math.sin(self.tiempo_anim * 0.016)) * 0.5
 
         glPushMatrix()
         glTranslatef(0, y_off, 0)

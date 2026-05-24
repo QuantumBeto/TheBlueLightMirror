@@ -46,10 +46,14 @@ class Nexo:
         self.tiempo_anim += dt
         if self.move_state == "caminar":
             self.walk_t += dt * 3.0
-        if self.move_state == "bailar":
-            self.dance_t += dt * 2.0
+        if self.move_state in ("bailar", "celebrar"):
+            self.dance_t += dt * 2.5
         if self.waving:
             self.wave_t += dt * 4.0
+        if self.move_state == "temblar":
+            import math
+            # vibración rápida en x
+            self.x += math.sin(self.tiempo_anim * 30) * 0.02
 
     def draw(self):
         t = self.tiempo_anim

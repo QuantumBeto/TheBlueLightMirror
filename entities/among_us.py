@@ -36,6 +36,15 @@ class AmongUs:
                 self.vel_y = 0.0
                 self.movimiento_actual = 1
         self.tiempo_anim += dt * 60
+        # Animaciones extra
+        if self.movimiento_actual == 8:   # celebrar: saltos
+            if not self.en_aire:
+                self.vel_y = self.gravedad * -8
+                self.en_aire = True
+        elif self.movimiento_actual == 9:  # temblar: vibración lateral
+            import math
+            self.x += math.sin(self.tiempo_anim * 0.5) * 0.04
+        # movimiento_actual == 10: bailar, manejado en draw
 
     def draw(self):
         glPushMatrix()

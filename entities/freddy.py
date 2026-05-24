@@ -17,6 +17,11 @@ class Freddy:
         self.vel_y = 0.0
         self.vel_z = 0.0
         self.expresion = 0   # 0=normal 1=feliz 2=triste 3=enojo 4=sorpresa 5=preocupado 6=confundido
+        self._walk_anim = False   # animación de caminar
+        self._anim_state = "idle"  # idle/celebrar/temblar/bailar
+        self.tiempo_anim = 0.0
+        self.en_aire = False
+        self.vel_y = 0.0
         self.q = gluNewQuadric()
 
     @property
@@ -28,12 +33,19 @@ class Freddy:
         return [self.vel_x, self.vel_y, self.vel_z]
 
     def update(self, dt, cognitive_friction=1.0):
+        self.tiempo_anim += dt
         self.x += self.vel_x
         self.y += self.vel_y
         self.z += self.vel_z
         self.vel_x *= 0.95
         self.vel_y *= 0.95
         self.vel_z *= 0.95
+        if self.en_aire:
+            self.vel_y -= 9.8 * dt
+            if self.y <= 0:
+                self.y = 0.0
+                self.en_aire = False
+                self.vel_y = 0.0
 
     # ── Primitivas ────────────────────────────────────────────────────────────
 
@@ -118,10 +130,30 @@ class Freddy:
 
     def _draw_extremidades(self):
         glColor3f(0.5, 0.3, 0.15)
-        for x in [-1.3, 1.3]:
-            glPushMatrix(); glTranslatef(x, 0.3, 0); self._sphere(0.55); glPopMatrix()
-        for x in [-0.8, 0.8]:
-            glPushMatrix(); glTranslatef(x, -1.2, 0); self._sphere(0.6); glPopMatrix()
+        t = self.tiempo_anim
+        if self._walk_anim or self._anim_state == "bailar":
+            freq = 6.0 if self._anim_state == "bailar" else 4.0
+            swing = math.sin(t * freq) * (35.0 if self._anim_state == "bailar" else 25.0)
+        elif self._anim_state == "celebrar":
+            swing = abs(math.sin(t * 5.0)) * 30.0
+        elif self._anim_state == "temblar":
+            swing = math.sin(t * 18.0) * 18.0
+        else:
+            swing = 0.0
+        # Brazos
+        for i, x in enumerate([-1.3, 1.3]):
+            glPushMatrix()
+            glTranslatef(x, 0.3, 0)
+            glRotatef(swing * (1 if i == 0 else -1), 1, 0, 0)
+            self._sphere(0.55)
+            glPopMatrix()
+        # Piernas
+        for i, x in enumerate([-0.8, 0.8]):
+            glPushMatrix()
+            glTranslatef(x, -1.2, 0)
+            glRotatef(swing * (-1 if i == 0 else 1), 1, 0, 0)
+            self._sphere(0.6)
+            glPopMatrix()
 
     # ── Expresiones ───────────────────────────────────────────────────────────
 
