@@ -1,10 +1,15 @@
 import pygame
 import math
-import sys
+import sys, os
 from config import WIDTH, HEIGHT, COLORS, CHARACTERS
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from entities import get_character
+
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 class MenuSystem:
     def __init__(self, screen):
@@ -35,14 +40,14 @@ class MenuSystem:
         
         pygame.mixer.init()
         try:
-            pygame.mixer.music.load('assets/audio/musica_miedo.mp3') 
+            pygame.mixer.music.load(resource_path('assets/audio/musica_miedo.mp3')) 
             pygame.mixer.music.set_volume(self.settings["volume"])
             pygame.mixer.music.play(-1)
         except:
             print("Audio no cargado")
 
         try:
-            self.sfx_select = pygame.mixer.Sound('assets/audio/ps2_select.wav')
+            self.sfx_select = pygame.mixer.Sound(resource_path('assets/audio/ps2_select.wav'))
             self.sfx_select.set_volume(self.settings["volume"] + 0.4)
         except:
             self.sfx_select = None

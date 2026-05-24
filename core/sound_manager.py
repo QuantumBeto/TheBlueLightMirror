@@ -4,7 +4,12 @@ Gestiona los sonidos por animación/movimiento de cada personaje.
 Usa los MP3 existentes sin cambiar sus nombres.
 """
 import pygame
-import os
+import sys, os
+
+def resource_path(relative_path):
+    if hasattr(sys, '_MEIPASS'):
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
 
 # Mapeo: estado de movimiento/animación → archivo de sonido
 # Clave = nombre del estado tal como lo usan los personajes
@@ -66,7 +71,7 @@ class SoundManager:
         self.sound_mgr.update(dt, player)
     """
 
-    def __init__(self, audio_dir: str = "assets/audio"):
+    def __init__(self, audio_dir: str = resource_path("assets/audio")):
         self.audio_dir   = audio_dir
         self._sounds: dict[str, pygame.mixer.Sound | None] = {}
         self._cooldowns: dict[str, float] = {}
