@@ -19,6 +19,7 @@ from core.mission_manager import MissionManager
 import math
 import sys
 
+from entities.distractions import DigitalDistraction
 from stages.school      import School
 from stages.stage_house import StageHouse
 from stages.stage_park  import StagePark
@@ -263,6 +264,7 @@ def _load_stage(stage_id, player):
     if hasattr(player, "y"):  player.y = 1.5
     player.concentracion = 100.0
     # Inyectar coordenadas de meta para brujula HUD
+    from entities.distractions import DigitalDistraction
     from stages.school      import META_X as SCH_X, META_Z as SCH_Z
     from stages.stage_house import META_X as HSE_X, META_Z as HSE_Z
     from stages.stage_park  import META_X as PRK_X, META_Z as PRK_Z
@@ -486,6 +488,8 @@ def run(character_id, stage_id="school"):
                 speed_mult = 1.0
 
             speed   = 4.0 * speed_mult * dt
+            # Informar a las distracciones la velocidad actual del jugador
+            DigitalDistraction.player_speed_actual = 4.0 * speed_mult
             yaw_rad = math.radians(camera.yaw)
             forward_x = -math.sin(yaw_rad); forward_z = -math.cos(yaw_rad)
             right_x   =  math.cos(yaw_rad); right_z   = -math.sin(yaw_rad)

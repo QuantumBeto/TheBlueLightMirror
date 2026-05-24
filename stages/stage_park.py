@@ -4,7 +4,6 @@ from OpenGL.GLU import *
 from core.collision import CollisionSystem
 from world.environment.park_lighting import ParkLighting
 from world.objects.npcs import NPC
-from world.objects.items import Items
 from world.objects.furniture import Furniture
 from entities.distractions import DigitalDistraction
 
@@ -23,26 +22,21 @@ class StagePark:
         self.wall_height = 8.0
 
         self.lighting = ParkLighting()
-        self.furniture = Furniture()
-        self.items     = Items()
-
-        self.npcs = [
-            NPC(  8, 0, 10, (0.4, 0.4, 0.5), 0.02),
-            NPC( -4, 0,  4, (0.3, 0.3, 0.3), 0.03),
-            NPC( 14, 0, -6, (0.2, 0.2, 0.4), 0.1),
-        ]
+        self.furniture = Furniture("park")
+        
+        self.npcs = []  # Parque sin NPCs humanos; peatones se ven en bancas
 
         # OBJETOS REALES DE LAS MISIONES DEL PARQUE
         self.distracciones = [
-            DigitalDistraction( 10.0,  20.0, 0.3, "kiosk"),      # Kiosco interactivo
-            DigitalDistraction( -8.0,  12.0, 0.3, "billboard"),  # Gran Valla publicitaria LED
-            DigitalDistraction( -20.0, -2.0, 0.3, "fountain"),   # La Fuente central 3D
-            DigitalDistraction( -6.0,  -6.0, 0.4, "npc_phone"),  # El NPC absorto en su pantalla
-            DigitalDistraction(  6.0, -14.0, 0.3, "signal"),     # La Torre WiFi de señal
-            DigitalDistraction(-18.0, -18.0, 0.3, "rest"),       # Banca del parque para descansar
+            DigitalDistraction( 10.0,  20.0, 0.3, "kiosk", dificultad="stage_park"),      # Kiosco interactivo
+            DigitalDistraction( -8.0,  12.0, 0.3, "billboard", dificultad="stage_park"),  # Gran Valla publicitaria LED
+            DigitalDistraction( -20.0, -2.0, 0.3, "fountain", dificultad="stage_park"),   # La Fuente central 3D
+            DigitalDistraction( -6.0,  -6.0, 0.4, "npc_phone", dificultad="stage_park"),  # El NPC absorto en su pantalla
+            DigitalDistraction(  6.0, -14.0, 0.3, "signal", dificultad="stage_park"),     # La Torre WiFi de señal
+            DigitalDistraction(-18.0, -18.0, 0.3, "rest", dificultad="stage_park"),       # Banca del parque para descansar
         ]
 
-        self.objetos_colisionables = self.npcs + self.distracciones
+        self.objetos_colisionables = self.distracciones
         self.meta_alcanzada = False
         self._meta_pulse    = 0.0
 
@@ -53,7 +47,6 @@ class StagePark:
     def update(self, dt, player=None):
         self.lighting.update(dt)
         self.furniture.update(dt)
-        self.items.update(dt)
         self._meta_pulse += dt * 2.5
 
         px = player.x if player else None
@@ -86,8 +79,7 @@ class StagePark:
         self._construir_zona_exterior()
         self._construir_zona_norte()
         self.furniture.draw()
-        self.items.draw()
-        
+                
         # Dibujar los elementos interactivos del parque
         for obj in self.distracciones:
             self._draw_custom_object(obj)

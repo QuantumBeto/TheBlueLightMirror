@@ -1,10 +1,9 @@
 import math
 from OpenGL.GL import *
 from OpenGL.GLU import *
-from core.collision import CollisionSystem
+from core.collision import CollisionSystem, StaticWall
 from world.environment.house_lighting import HouseLighting
 from world.objects.npcs import NPC
-from world.objects.items import Items
 from world.objects.furniture import Furniture
 from entities.distractions import DigitalDistraction
 
@@ -23,27 +22,28 @@ class StageHouse:
         self.wall_height = 8.0
 
         self.lighting  = HouseLighting()
-        self.furniture = Furniture()
-        self.items     = Items()
-
-        # NPCs de la casa
-        self.npcs = [
-            NPC(  5, 0,  6, (0.4, 0.4, 0.5), 0.02),
-            NPC( -5, 0,  0, (0.3, 0.3, 0.3), 0.03),
-            NPC(  2, 0, -8, (0.2, 0.2, 0.4), 0.1),
-        ]
+        self.furniture = Furniture("house")
+        
+        self.npcs = []  # Sin NPCs en casa
 
         # OBJETOS REALES DE LAS MISIONES DE LA CASA
         self.distracciones = [
-            DigitalDistraction(  8.0,  18.0, 0.2, "phone"),      # Teléfono personal
-            DigitalDistraction( -6.0,  10.0, 0.3, "tv"),         # Televisión de la sala
-            DigitalDistraction( 12.0,   2.0, 0.3, "computer"),   # Computadora del estudio
-            DigitalDistraction( -8.0,  -4.0, 0.3, "sleep"),      # Cama para descansar
-            DigitalDistraction(  5.0, -10.0, 0.3, "mirror"),     # ¡El Espejo Azul narrativo!
-            DigitalDistraction(-14.0, -14.0, 0.3, "lamp"),       # Lámpara de 6500K
+            DigitalDistraction(  8.0,  18.0, 0.2, "phone", dificultad="stage_house"),      # Teléfono personal
+            DigitalDistraction( -6.0,  10.0, 0.3, "tv", dificultad="stage_house"),         # Televisión de la sala
+            DigitalDistraction( 12.0,   2.0, 0.3, "computer", dificultad="stage_house"),   # Computadora del estudio
+            DigitalDistraction( -8.0,  -4.0, 0.3, "sleep", dificultad="stage_house"),      # Cama para descansar
+            DigitalDistraction(  5.0, -10.0, 0.3, "mirror", dificultad="stage_house"),     # ¡El Espejo Azul narrativo!
+            DigitalDistraction(-14.0, -14.0, 0.3, "lamp", dificultad="stage_house"),       # Lámpara de 6500K
         ]
 
-        self.objetos_colisionables = self.npcs + self.distracciones
+        self.objetos_colisionables = self.distracciones
+        # Paredes internas de la casa (mismas posiciones que _draw_interior_wall)
+        self.paredes = [
+            StaticWall(-20,  0, -19, 18),   # pared que separa cocina de sala
+            StaticWall( -8,  8,   2,  9),   # pared norte sala/pasillo
+            StaticWall(  6,  8,  24,  9),   # continuacion pared norte
+            StaticWall( -8, -4,  24, -3),   # pared sur sala
+        ]
         self.meta_alcanzada = False
         self._meta_pulse    = 0.0
 
@@ -54,7 +54,6 @@ class StageHouse:
     def update(self, dt, player=None):
         self.lighting.update(dt)
         self.furniture.update(dt)
-        self.items.update(dt)
         self._meta_pulse += dt * 2.5
 
         px = player.x if player else None
@@ -77,7 +76,8 @@ class StageHouse:
         return CollisionSystem.check_all(
             player=player,
             limits=(self.limit_x, self.limit_z),
-            obstacles=self.objetos_colisionables
+            obstacles=self.objetos_colisionables,
+            walls=self.paredes
         )
 
     def draw(self):
@@ -87,8 +87,7 @@ class StageHouse:
         self._construir_planta_baja()
         self._construir_primer_piso()
         self.furniture.draw()
-        self.items.draw()
-        
+                
         # Dibujar los objetos con su nueva identidad visual
         for obj in self.distracciones:
             self._draw_custom_object(obj)

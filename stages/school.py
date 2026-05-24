@@ -22,7 +22,7 @@ class School:
         self.wall_height = 8.0
 
         self.lighting  = SchoolLighting()
-        self.furniture = Furniture()
+        self.furniture = Furniture("school")
         self.items     = Items()
 
         # NPCs (Zombis digitales - lentos y oscuros)
@@ -34,12 +34,12 @@ class School:
 
         # OBJETOS REALES DE LAS MISIONES DE LA ESCUELA
         self.distracciones = [
-            DigitalDistraction(  6.0,  18.0, 0.5, "phone"),      # Misión A
-            DigitalDistraction( -7.0,  10.0, 0.3, "computer"),   # Misión B
-            DigitalDistraction( 10.0,   2.0, 0.3, "tv"),         # Misión A
-            DigitalDistraction( -9.0,  -4.0, 0.3, "rest"),       # Misión C
-            DigitalDistraction(  4.0, -12.0, 0.3, "mirror"),     # Misión C (El Espejo Azul)
-            DigitalDistraction(-16.0, -16.0, 0.3, "lamp"),       # Misión B
+            DigitalDistraction(  6.0,  18.0, 0.5, "phone", dificultad="school"),      # Misión A
+            DigitalDistraction( -7.0,  10.0, 0.3, "computer", dificultad="school"),   # Misión B
+            DigitalDistraction( 10.0,   2.0, 0.3, "tv", dificultad="school"),         # Misión A
+            DigitalDistraction( -9.0,  -4.0, 0.3, "rest", dificultad="school"),       # Misión C
+            DigitalDistraction(  4.0, -12.0, 0.3, "mirror", dificultad="school"),     # Misión C (El Espejo Azul)
+            DigitalDistraction(-16.0, -16.0, 0.3, "lamp", dificultad="school"),       # Misión B
         ]
 
         self.objetos_colisionables = self.npcs + self.distracciones

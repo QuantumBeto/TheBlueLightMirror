@@ -126,12 +126,6 @@ class HUD:
         # 6. Notificación misión completada
         self._draw_notif(surface)
 
-        # 7. Pantallas finales
-        if meta_alcanzada:
-            self._draw_victoria(surface)
-        if derrota:
-            self._draw_derrota(surface)
-
     # ══════════════════════════════════════════════════════════════════════════
     # BARRA DE CONCENTRACIÓN (original intacta)
     # ══════════════════════════════════════════════════════════════════════════
@@ -397,43 +391,3 @@ class HUD:
         flash = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         flash.fill((180, 0, 0, self._danio_alpha))
         surface.blit(flash, (0, 0))
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # PANTALLAS FINALES
-    # ══════════════════════════════════════════════════════════════════════════
-    def _draw_victoria(self, surface):
-        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((0, 20, 10, 160))
-        surface.blit(overlay, (0, 0))
-
-        pulse = abs(math.sin(self._pulso * 1.5))
-        color = (int(100+155*pulse), 255, int(150+100*pulse))
-
-        t1 = self.font_title.render("NIVEL SUPERADO", True, color)
-        t2 = self.font_mono.render("Has logrado evadir la luz azul y mantener el enfoque.", True, (200, 255, 220))
-        t3 = self.font_small.render("Presiona ESC para seleccionar otro nivel.", True, (120, 180, 140))
-
-        surface.blit(t1, (WIDTH//2 - t1.get_width()//2, HEIGHT//2 - 100))
-        surface.blit(t2, (WIDTH//2 - t2.get_width()//2, HEIGHT//2))
-        surface.blit(t3, (WIDTH//2 - t3.get_width()//2, HEIGHT//2 + 50))
-
-        # Resumen de misiones
-        if self.misiones:
-            comp = sum(1 for m in self.misiones if m["completada"])
-            r = self.font_mono.render(f"Misiones: {comp}/{len(self.misiones)}", True, C_GOLD)
-            surface.blit(r, (WIDTH//2 - r.get_width()//2, HEIGHT//2 + 90))
-
-    def _draw_derrota(self, surface):
-        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
-        overlay.fill((30, 0, 0, 180))
-        surface.blit(overlay, (0, 0))
-
-        pulse = abs(math.sin(self._pulso * 2))
-        color = (int(200+55*pulse), 30, 30)
-        t1 = self.font_title.render("CONCENTRACIÓN PERDIDA", True, color)
-        t2 = self.font_mono.render("Las distracciones digitales te vencieron.", True, (255, 180, 180))
-        t3 = self.font_small.render("Presiona ESC para continuar.", True, (180, 120, 120))
-
-        surface.blit(t1, (WIDTH//2 - t1.get_width()//2, HEIGHT//2 - 100))
-        surface.blit(t2, (WIDTH//2 - t2.get_width()//2, HEIGHT//2))
-        surface.blit(t3, (WIDTH//2 - t3.get_width()//2, HEIGHT//2 + 50))
