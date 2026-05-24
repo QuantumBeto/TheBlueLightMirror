@@ -1,38 +1,48 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
+from PyInstaller.utils.hooks import collect_submodules
 
+block_cipher = None
+
+audio_files = [
+    (os.path.join('assets', 'audio', f), os.path.join('assets', 'audio'))
+    for f in os.listdir(os.path.join('assets', 'audio'))
+]
 
 a = Analysis(
     ['main.py'],
-    pathex=[],
+    pathex=['.'],
     binaries=[],
-    datas=[('assets', 'assets')],
-    hiddenimports=[],
+    datas=audio_files,
+    hiddenimports=[
+        'pygame', 'pygame.mixer', 'pygame.font', 'pygame.display',
+        'OpenGL', 'OpenGL.GL', 'OpenGL.GLU',
+        'OpenGL.arrays', 'OpenGL.arrays.vbo',
+        'OpenGL.platform', 'OpenGL.platform.win32',
+        'OpenGL.converters', 'ctypes', 'ctypes.util',
+    ] + collect_submodules('OpenGL') + collect_submodules('pygame'),
     hookspath=[],
-    hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=['tkinter', 'matplotlib', 'numpy', 'scipy'],
+    cipher=block_cipher,
     noarchive=False,
-    optimize=0,
 )
-pyz = PYZ(a.pure)
+
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
     a.scripts,
     a.binaries,
+    a.zipfiles,
     a.datas,
     [],
     name='TheBlueLightMirror',
     debug=False,
-    bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
+    onefile=True,
 )

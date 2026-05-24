@@ -17,7 +17,11 @@ from core.sound_manager import SoundManager
 from ui.hud import HUD
 from core.mission_manager import MissionManager
 import math
-import sys
+import sys, os
+
+def resource_path(r):
+    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base, r)
 
 from entities.distractions import DigitalDistraction
 from stages.school      import School
@@ -317,7 +321,7 @@ def run(character_id, stage_id="school"):
 
     try:
         if pygame.mixer.get_init():
-            pygame.mixer.music.load("assets/audio/musica_miedo.mp3")
+            pygame.mixer.music.load(resource_path("assets/audio/musica_miedo.mp3"))
             pygame.mixer.music.set_volume(0.4)
             pygame.mixer.music.play(-1)
     except Exception:
