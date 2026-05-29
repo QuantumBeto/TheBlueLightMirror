@@ -17,13 +17,8 @@ from core.sound_manager import SoundManager
 from ui.hud import HUD
 from core.mission_manager import MissionManager
 import math
-import sys, os
+import sys
 
-def resource_path(r):
-    base = getattr(sys, "_MEIPASS", os.path.dirname(os.path.abspath(__file__)))
-    return os.path.join(base, r)
-
-from entities.distractions import DigitalDistraction
 from stages.school      import School
 from stages.stage_house import StageHouse
 from stages.stage_park  import StagePark
@@ -268,7 +263,6 @@ def _load_stage(stage_id, player):
     if hasattr(player, "y"):  player.y = 1.5
     player.concentracion = 100.0
     # Inyectar coordenadas de meta para brujula HUD
-    from entities.distractions import DigitalDistraction
     from stages.school      import META_X as SCH_X, META_Z as SCH_Z
     from stages.stage_house import META_X as HSE_X, META_Z as HSE_Z
     from stages.stage_park  import META_X as PRK_X, META_Z as PRK_Z
@@ -312,6 +306,7 @@ def run(character_id, stage_id="school"):
     show_levels     = False
     mouse_libre     = False
     sonido_activo   = True
+    anim_extra_timer = 0.0   # segundos que dura la animacion extra activa
 
     # ── Variables de transición de nivel (nuevo) ─────────────────────────────
     level_complete_timer  = 0.0          # segundos mostrando la pantalla
@@ -321,7 +316,7 @@ def run(character_id, stage_id="school"):
 
     try:
         if pygame.mixer.get_init():
-            pygame.mixer.music.load(resource_path("assets/audio/musica_miedo.mp3"))
+            pygame.mixer.music.load("assets/audio/musica_miedo.mp3")
             pygame.mixer.music.set_volume(0.4)
             pygame.mixer.music.play(-1)
     except Exception:
@@ -436,13 +431,18 @@ def run(character_id, stage_id="school"):
                     for k, v in [(K_1,1),(K_2,2),(K_3,3),(K_4,4),(K_5,5)]:
                         if event.key == k:
                             _set_expresion(player, v)
+                    # Teclas de animación extra
+                    _ANIM_KEYS = {K_z: "celebrar", K_x: "temblar", K_c: "bailar"}
+                    if event.key in _ANIM_KEYS:
+                        nombre = _ANIM_KEYS[event.key]
+                        _set_animacion_extra(player, nombre)
+                        anim_extra_timer = 2.5
+                        hud.set_anim_activa(nombre)
 
-            # Botones de animación extra del HUD
+            # Click en HUD (solo minimizar panel de teclas)
             if event.type == MOUSEBUTTONDOWN and event.button == 1:
-                if not is_paused and not show_controls and not show_levels and mouse_libre:
-                    anim = hud.handle_click(mx, my)
-                    if anim:
-                        _set_animacion_extra(player, anim)
+                if not is_paused and not show_controls and not show_levels:
+                    hud.handle_click(*event.pos)
 
             if event.type == MOUSEMOTION and not is_paused and not show_controls and not show_levels:
                 botones_mouse = pygame.mouse.get_pressed()
@@ -492,8 +492,6 @@ def run(character_id, stage_id="school"):
                 speed_mult = 1.0
 
             speed   = 4.0 * speed_mult * dt
-            # Informar a las distracciones la velocidad actual del jugador
-            DigitalDistraction.player_speed_actual = 4.0 * speed_mult
             yaw_rad = math.radians(camera.yaw)
             forward_x = -math.sin(yaw_rad); forward_z = -math.cos(yaw_rad)
             right_x   =  math.cos(yaw_rad); right_z   = -math.sin(yaw_rad)
@@ -504,8 +502,15 @@ def run(character_id, stage_id="school"):
             if keys[K_a]: move_x -= right_x;   move_z -= right_z
             if keys[K_d]: move_x += right_x;   move_z += right_z
 
+            # Descontar timer de animación extra
+            if anim_extra_timer > 0:
+                anim_extra_timer -= dt
+                if anim_extra_timer <= 0:
+                    hud.set_anim_activa(None)
+
             moving = (move_x != 0 or move_z != 0)
             if moving:
+                anim_extra_timer = 0.0   # moverse cancela la animación extra
                 length = math.sqrt(move_x**2 + move_z**2)
                 player.x += (move_x / length) * speed
                 player.z += (move_z / length) * speed
@@ -517,7 +522,9 @@ def run(character_id, stage_id="school"):
                     player.concentracion = min(100.0, player.concentracion + 3.0 * dt)
             else:
                 if not keys[K_RCTRL]:
-                    _set_movimiento(player, 1)
+                    # Solo resetear a idle si no hay animación extra activa
+                    if anim_extra_timer <= 0:
+                        _set_movimiento(player, 1)
 
             player.update(dt)
             player.concentracion = max(0.0, player.concentracion)

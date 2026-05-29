@@ -62,6 +62,7 @@ class HUD:
 
         # Animaciones extra de personaje (se exponen como botones)
         self._anim_extra_rect = {}   # nombre -> rect
+        self._anim_activa     = None
 
     # ══════════════════════════════════════════════════════════════════════════
     # UPDATE
@@ -89,14 +90,12 @@ class HUD:
             self._notif_queue.append(texto)
 
     def handle_click(self, mx, my):
-        """Devuelve el nombre de animación si se hizo click en un botón, None si no."""
         if self._teclas_rect and self._teclas_rect.collidepoint(mx, my):
             self._teclas_min = not self._teclas_min
-            return None
-        for nombre, rect in self._anim_extra_rect.items():
-            if rect.collidepoint(mx, my):
-                return nombre
         return None
+
+    def set_anim_activa(self, nombre):
+        self._anim_activa = nombre
 
     # ══════════════════════════════════════════════════════════════════════════
     # DRAW PRINCIPAL
@@ -125,6 +124,12 @@ class HUD:
 
         # 6. Notificación misión completada
         self._draw_notif(surface)
+
+        # 7. Pantallas finales
+        if meta_alcanzada:
+            self._draw_victoria(surface)
+        if derrota:
+            self._draw_derrota(surface)
 
     # ══════════════════════════════════════════════════════════════════════════
     # BARRA DE CONCENTRACIÓN (original intacta)
@@ -273,6 +278,9 @@ class HUD:
             ("CTRL IZQ",  "Camara libre"),
             ("ESC",       "Pausar"),
             ("1-5",       "Expresiones"),
+            ("Z",         "Celebrar"),
+            ("X",         "Temblar"),
+            ("C",         "Bailar"),
         ]
 
         PW = 195
@@ -305,43 +313,47 @@ class HUD:
     # BOTONES DE ANIMACIONES EXTRA (arriba derecha, bajo el panel de misiones)
     # ══════════════════════════════════════════════════════════════════════════
     def _draw_anim_buttons(self, surface, player):
-        """3 botones de animaciones especiales del personaje."""
+        """Panel de animaciones extra — activadas con teclas Z / X / C."""
         ANIMS = [
-            ("celebrar", "[ CELEBRAR ]"),
-            ("temblar",  "[  TEMBLAR ]"),
-            ("bailar",   "[   BAILAR ]"),
+            ("Z", "celebrar", "CELEBRAR"),
+            ("X", "temblar",  "TEMBLAR"),
+            ("C", "bailar",   "BAILAR"),
         ]
 
         PW = 260
-        BH = 24
+        BH = 22
         PX = WIDTH - PW - 12
-        # Posicionamos justo debajo del panel de misiones
-        PY_BASE = 12  # mismo X que misiones
-        # calculamos el alto del panel misiones
         if self.misiones:
             total_h_mis = 14 + 20 + len(self.misiones) * 24 + 38 + 10
         else:
             total_h_mis = 0
-        PY = PY_BASE + total_h_mis + 8
+        PY = 12 + total_h_mis + 8
 
-        _panel(surface, PX, PY, PW, len(ANIMS) * (BH + 4) + 14, alpha=170)
+        _panel(surface, PX, PY, PW, len(ANIMS) * (BH + 4) + 22, alpha=170)
 
-        lbl = self.font_teclas.render("ANIMACIONES", True, C_GOLD)
+        lbl = self.font_teclas.render("ANIMACIONES EXTRA", True, C_GOLD)
         surface.blit(lbl, (PX + PW//2 - lbl.get_width()//2, PY + 4))
 
-        self._anim_extra_rect = {}
-        mx, my = pygame.mouse.get_pos()
-        y = PY + 18
+        # Resaltar la animacion activa
+        anim_activa = getattr(self, "_anim_activa", None)
 
-        for nombre, texto in ANIMS:
+        y = PY + 20
+        for tecla, nombre, texto in ANIMS:
+            activa = (anim_activa == nombre)
+            bg = (0, 70, 30) if activa else (0, 20, 45)
             rect = pygame.Rect(PX + 6, y, PW - 12, BH)
-            hover = rect.collidepoint(mx, my)
-            bg = (0, 50, 100) if hover else (0, 20, 45)
             pygame.draw.rect(surface, bg, rect, border_radius=4)
-            pygame.draw.rect(surface, (*C_BORDER[:3],), rect, 1, border_radius=4)
-            txt = self.font_teclas.render(texto, True, C_WHITE if hover else C_GRAY)
-            surface.blit(txt, (rect.centerx - txt.get_width()//2, rect.centery - txt.get_height()//2))
-            self._anim_extra_rect[nombre] = rect
+            borde_col = C_GREEN if activa else (*C_BORDER[:3],)
+            pygame.draw.rect(surface, borde_col, rect, 1, border_radius=4)
+
+            # Tecla
+            k_surf = self.font_teclas.render(f"[{tecla}]", True, C_GOLD)
+            surface.blit(k_surf, (rect.x + 6, rect.centery - k_surf.get_height()//2))
+            # Nombre
+            t_col = C_GREEN if activa else C_WHITE
+            t_surf = self.font_teclas.render(texto, True, t_col)
+            surface.blit(t_surf, (rect.x + 36, rect.centery - t_surf.get_height()//2))
+
             y += BH + 4
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -391,3 +403,43 @@ class HUD:
         flash = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         flash.fill((180, 0, 0, self._danio_alpha))
         surface.blit(flash, (0, 0))
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # PANTALLAS FINALES
+    # ══════════════════════════════════════════════════════════════════════════
+    def _draw_victoria(self, surface):
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((0, 20, 10, 160))
+        surface.blit(overlay, (0, 0))
+
+        pulse = abs(math.sin(self._pulso * 1.5))
+        color = (int(100+155*pulse), 255, int(150+100*pulse))
+
+        t1 = self.font_title.render("NIVEL SUPERADO", True, color)
+        t2 = self.font_mono.render("Has logrado evadir la luz azul y mantener el enfoque.", True, (200, 255, 220))
+        t3 = self.font_small.render("Presiona ESC para seleccionar otro nivel.", True, (120, 180, 140))
+
+        surface.blit(t1, (WIDTH//2 - t1.get_width()//2, HEIGHT//2 - 100))
+        surface.blit(t2, (WIDTH//2 - t2.get_width()//2, HEIGHT//2))
+        surface.blit(t3, (WIDTH//2 - t3.get_width()//2, HEIGHT//2 + 50))
+
+        # Resumen de misiones
+        if self.misiones:
+            comp = sum(1 for m in self.misiones if m["completada"])
+            r = self.font_mono.render(f"Misiones: {comp}/{len(self.misiones)}", True, C_GOLD)
+            surface.blit(r, (WIDTH//2 - r.get_width()//2, HEIGHT//2 + 90))
+
+    def _draw_derrota(self, surface):
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        overlay.fill((30, 0, 0, 180))
+        surface.blit(overlay, (0, 0))
+
+        pulse = abs(math.sin(self._pulso * 2))
+        color = (int(200+55*pulse), 30, 30)
+        t1 = self.font_title.render("CONCENTRACIÓN PERDIDA", True, color)
+        t2 = self.font_mono.render("Las distracciones digitales te vencieron.", True, (255, 180, 180))
+        t3 = self.font_small.render("Presiona ESC para continuar.", True, (180, 120, 120))
+
+        surface.blit(t1, (WIDTH//2 - t1.get_width()//2, HEIGHT//2 - 100))
+        surface.blit(t2, (WIDTH//2 - t2.get_width()//2, HEIGHT//2))
+        surface.blit(t3, (WIDTH//2 - t3.get_width()//2, HEIGHT//2 + 50))

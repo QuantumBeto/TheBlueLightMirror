@@ -5,8 +5,7 @@ Mismos métodos de siempre + zoom con rueda del mouse.
 import math
 from OpenGL.GLU import gluLookAt
 
-# Techo de las paredes = wall_height * 2 = 16.
-# La cámara debe quedarse al menos 1 unidad por debajo.
+
 _CAM_Y_MAX = 14.5
 
 
@@ -14,7 +13,7 @@ class CinematicCamera:
     def __init__(self):
         self.distance          = 8.0
         self.distance_min      = 2.5
-        self.distance_max      = 12.0   # reducido: con pitch 40° => cam_y max ≈ 9.2, nunca sale
+        self.distance_max      = 12.0   
         self.zoom_speed        = 1.2
         self.y_offset          = 1.5
         self.yaw               = 0.0
@@ -41,14 +40,12 @@ class CinematicCamera:
         cam_y = target_y + self.y_offset  + self.distance * math.sin(pitch_rad)
         cam_z = target_z + self.distance * math.cos(yaw_rad) * math.cos(pitch_rad)
 
-        # Anti-clipping XZ con paredes
         if limits:
             lim_x, lim_z = limits
             margin = 1.2
             cam_x = max(-lim_x + margin, min(lim_x - margin, cam_x))
             cam_z = max(-lim_z + margin, min(lim_z - margin, cam_z))
 
-        # Techo duro: jamás supera el interior de las paredes
         cam_y = max(0.5, min(_CAM_Y_MAX, cam_y))
 
         gluLookAt(

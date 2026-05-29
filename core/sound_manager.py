@@ -11,22 +11,19 @@ def resource_path(relative_path):
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
 
-# Mapeo: estado de movimiento/animación → archivo de sonido
-# Clave = nombre del estado tal como lo usan los personajes
+
 ANIM_SOUND_MAP = {
-    # movimiento numérico (Sombrio, Freddy, Nexo, Baymax, AmongUs)
-    1: None,                    # idle — sin sonido
+    # movimiento 
+    1: None,                    
     2: "caminar.mp3",           # caminar
-    3: "saltar.mp3",            # saltar / en el aire
-    4: "mano_arriba.mp3",       # mano arriba / saludar activo
+    3: "saltar.mp3",            # saltar 
+    4: "mano_arriba.mp3",       #  saludar activo
     5: "estirar.mp3",           # estirar
     6: "agacharse.mp3",         # agacharse
     7: "mano_arriba.mp3",       # manos arriba
-    # estados de booleans
     "bailando":  "bailar.mp3",
     "girando":   "girar.mp3",
     "temblando": "miedo.mp3",
-    # animaciones texto (Pato y otros con move_state / animacion)
     "IDLE":      None,
     "CAMINANDO": "caminar.mp3",
     "BAILANDO":  "bailar.mp3",
@@ -39,8 +36,8 @@ ANIM_SOUND_MAP = {
     "MIEDO":     "miedo.mp3",
 }
 
-# Mapeo de expresiones (teclas 1-5) → sonido
-# expresion numérica  (Sombrio/Freddy/etc.)  y texto (expression en otros)
+#  expresiones
+# expresion numérica  
 EXPR_SOUND_MAP = {
     # numérico
     1: "saludar.mp3",       # normal  → saludar
@@ -56,7 +53,7 @@ EXPR_SOUND_MAP = {
     "surprise": "mano_arriba.mp3",
 }
 
-# Cuánto tiempo mínimo entre repeticiones del mismo sonido (segundos)
+# Cuánto tiempo mínimo entre repeticiones 
 SOUND_COOLDOWN = 0.35
 
 
@@ -88,7 +85,6 @@ class SoundManager:
         if self._enabled:
             self._preload()
 
-    # ── Precarga ──────────────────────────────────────────────────────────────
     def _preload(self):
         needed = set(v for v in ANIM_SOUND_MAP.values() if v)
         for fname in needed:
@@ -103,7 +99,7 @@ class SoundManager:
             else:
                 self._sounds[fname] = None
 
-    # ── Detectar estado actual del personaje ──────────────────────────────────
+    # estado actual del personaje 
     @staticmethod
     def _get_state(player) -> str | int | None:
         """
@@ -147,7 +143,7 @@ class SoundManager:
             return expr_str.lower()
         return None
 
-    # ── Reproducir sonido puntual ─────────────────────────────────────────────
+    #  Reproducir sonido puntual 
     def _play(self, fname: str):
         if not self._enabled or not fname:
             return
@@ -163,7 +159,7 @@ class SoundManager:
             ch.play(snd)
         self._cooldowns[fname] = SOUND_COOLDOWN
 
-    # ── Llamar una vez por frame ──────────────────────────────────────────────
+    #  Llamar una vez por frame 
     def update(self, dt: float, player):
         if not self._enabled:
             return
@@ -172,7 +168,7 @@ class SoundManager:
         for k in list(self._cooldowns):
             self._cooldowns[k] = max(0.0, self._cooldowns[k] - dt)
 
-        # ── Sonidos de movimiento/animación ───────────────────────────────────
+        # ─ Sonidos de movimiento
         state = self._get_state(player)
         if state is not None:
             fname = ANIM_SOUND_MAP.get(state)
@@ -183,7 +179,7 @@ class SoundManager:
                     self._play(fname)
         self._last_state = state
 
-        # ── Sonidos de expresión (teclas 1-5) ────────────────────────────────
+        #  Sonidos de expresión  
         expr = self._get_expresion(player)
         if expr is not None and expr != self._last_expr:
             fname_expr = EXPR_SOUND_MAP.get(expr)
@@ -192,7 +188,7 @@ class SoundManager:
                 self._play_canal(fname_expr, canal=2)
         self._last_expr = expr
 
-    # ── Reproducir en canal específico ───────────────────────────────────────
+    #  Reproducir en canal específico 
     def _play_canal(self, fname: str, canal: int = 1):
         if not self._enabled or not fname:
             return
@@ -202,7 +198,7 @@ class SoundManager:
         ch = pygame.mixer.Channel(canal)
         ch.play(snd)   # las expresiones siempre suenan al cambiar, sin cooldown
 
-    # ── Control de volumen desde pausa ───────────────────────────────────────
+    #  Control de volumen desde pausa 
     def set_volume(self, vol: float):
         vol = max(0.0, min(1.0, vol))
         for snd in self._sounds.values():

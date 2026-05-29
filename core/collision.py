@@ -18,16 +18,13 @@ class CollisionSystem:
         p_radio   = 0.5
         limit_x, limit_z = limits
 
-        # 1. Límites del mapa
         if player.x >  limit_x - p_radio: player.x =  limit_x - p_radio; collided = True
         if player.x < -limit_x + p_radio: player.x = -limit_x + p_radio; collided = True
         if player.z >  limit_z - p_radio: player.z =  limit_z - p_radio; collided = True
         if player.z < -limit_z + p_radio: player.z = -limit_z + p_radio; collided = True
 
-        # 2. Paredes estáticas AABB (interiores)
         if walls:
             for w in walls:
-                # Expandir la pared por el radio del jugador
                 ex1 = w.x1 - p_radio; ex2 = w.x2 + p_radio
                 ez1 = w.z1 - p_radio; ez2 = w.z2 + p_radio
                 if ex1 < player.x < ex2 and ez1 < player.z < ez2:
@@ -43,7 +40,6 @@ class CollisionSystem:
                     else:           player.z = ez2
                     collided = True
 
-        # 3. Obstáculos circulares (distracciones, NPCs, muebles)
         for obs in obstacles:
             dx   = player.x - obs.x
             dz   = player.z - obs.z
